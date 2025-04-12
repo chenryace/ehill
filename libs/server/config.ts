@@ -393,5 +393,98 @@ export function loadConfigAndListErrors(): {
                     cause: coerceToValidCause(e),
                     fixes: [
                         {
-                            descr
-(Content truncated due to size limit. Use line ranges to read in chunks)
+                            description:
+                                'Set the STORE_END_POINT environment variable',
+                            recommendation: IssueFixRecommendation.RECOMMENDED,
+                            steps: [
+                                ErrInstruction.ENV_EDIT,
+                                "Set a variable with STORE_END_POINT as key and your store's endpoint as the variable. Note that the endpoint must be resolvable by the server Notea runs on.",
+                            ],
+                        },
+                        {
+                            description:
+                                'Set store.endpoint in the configuration file',
+                            recommendation: IssueFixRecommendation.RECOMMENDED,
+                            steps: [
+                                ErrInstruction.CONFIG_FILE_OPEN,
+                                "In the store section, set endpoint to your store's endpoint.",
+                            ],
+                        },
+                    ],
+                })
+            );
+            (store as S3StoreConfiguration).region =
+                env.getEnvRaw('STORE_REGION', false) ?? (store as S3StoreConfiguration).region ?? 'us-east-1';
+            (store as S3StoreConfiguration).prefix =
+                env.getEnvRaw('STORE_PREFIX', false) ?? (store as S3StoreConfiguration).prefix ?? '';
+            (store as S3StoreConfiguration).proxyAttachments = env.parseBool(
+                env.getEnvRaw('DIRECT_RESPONSE_ATTACHMENT', false),
+                (store as S3StoreConfiguration).proxyAttachments ?? false
+            );
+        } catch (e) {
+            errors.push({
+                name: ErrTitle.INVALID_STORE_CONFIG,
+                description: 'Could not load configuration for store',
+                severity: IssueSeverity.FATAL_ERROR,
+                category: IssueCategory.CONFIG,
+                cause: coerceToValidCause(e),
+                fixes: [],
+            });
+        }
+    }
+
+    let server: ServerConfiguration;
+    if (!baseConfig.server) {
+        server = {} as ServerConfiguration;
+    } else {
+        server = baseConfig.server;
+    }
+    {
+        server.useSecureCookies = env.parseBool(
+            env.getEnvRaw('COOKIE_SECURE', false),
+            server.useSecureCookies ?? process.env.NODE_ENV === 'production'
+        );
+        server.baseUrl = env.getEnvRaw('BASE_URL', false) ?? server.baseUrl;
+    }
+
+    return {
+        config: {
+            auth,
+            store,
+            server,
+        },
+        errors,
+    };
+}
+
+const MAX_ERRORS = 2;
+export function loadConfig() {
+    const result = loadConfigAndListErrors();
+
+    if (!result.config) {
+        const { errors } = result;
+        let name = errors
+            .slice(0, MAX_ERRORS)
+            .map((v) => v.name)
+            .join(', ');
+        if (errors.length > MAX_ERRORS) {
+            const rest = errors.length - MAX_ERRORS;
+            name += ' and ' + rest + ' other error' + (rest > 1 ? 's' : '');
+        }
+        throw new Error(name);
+    }
+
+    loaded = result.config;
+
+    return loaded;
+}
+
+export function config(): Configuration {
+    if (!loaded) {
+        logger.debug('Loading configuration');
+        loadConfig();
+        logger.debug('Successfully loaded configuration');
+    }
+
+    return loaded;
+}
