@@ -30,6 +30,7 @@ export type AuthConfiguration = { type: 'none' } | BasicAuthConfiguration;
 export interface PostgreSQLStoreConfiguration {
     connectionString: string;
     prefix: string;
+    proxyAttachments: boolean; 
 }
 
 export type StoreConfiguration = PostgreSQLStoreConfiguration;
@@ -268,6 +269,10 @@ export function loadConfigAndListErrors(): {
         store.prefix =
             env.getEnvRaw('STORE_PREFIX', false) ?? 
             store.prefix ?? '';
+        (store as PostgreSQLStoreConfiguration).proxyAttachments = 
+            process.env.PROXY_ATTACHMENTS === 'true' || 
+            (store as PostgreSQLStoreConfiguration).proxyAttachments || 
+            true; // 默认设为true，确保链接正常工作
     } catch (e) {
         errors.push({
             name: ErrTitle.INVALID_STORE_CONFIG,
