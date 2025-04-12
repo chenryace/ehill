@@ -171,6 +171,29 @@ const useEditor = (initNote?: NoteModel) => {
         []
     );
 
+        // 添加初始内容加载
+    useEffect(() => {
+        if (note?.content) {
+            setCurrentContent(note.content);
+        }
+    }, [note?.content]);
+    
+    // 添加未保存内容提示
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (isEditing && currentContent !== note?.content) {
+                const message = '您有未保存的更改，确定要离开吗？';
+                e.returnValue = message;
+                return message;
+            }
+        };
+    
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, [isEditing, currentContent, note?.content]);
+
     const saveNote = useCallback(
         async () => {
             if (currentContent) {
