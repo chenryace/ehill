@@ -304,7 +304,7 @@ export function loadConfigAndListErrors(): {
 }
 
 const MAX_ERRORS = 2;
-export function loadConfig() {
+export function loadConfig(): Configuration {
     const result = loadConfigAndListErrors();
 
     if (!result.config) {
@@ -322,7 +322,8 @@ export function loadConfig() {
 
     loaded = result.config;
 
-    return loaded;
+    // 确保返回的是 Configuration 类型，而不是 undefined
+    return result.config;
 }
 
 export function config(): Configuration {
