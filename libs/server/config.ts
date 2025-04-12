@@ -241,10 +241,9 @@ export function loadConfigAndListErrors(): {
         // 获取连接字符串
         tryElseAddError(
             () => {
-                store.connectionString = 
-                    process.env.STORE_CONNECTION_STRING || 
-                    (env.getEnvRaw('STORE_CONNECTION_STRING', !store.connectionString) ?? 
-                    store.connectionString);
+                store.connectionString = process.env.STORE_CONNECTION_STRING || 
+                                         env.getEnvRaw('STORE_CONNECTION_STRING', false) || 
+                                         store.connectionString || '';
             },
             (e) => ({
                 name: 'PostgreSQL连接字符串未提供',
