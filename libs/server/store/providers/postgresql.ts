@@ -37,17 +37,63 @@ export class StorePostgreSQL extends StoreProvider {
      * 初始化数据库模式
      */
     private async initSchema() {
-        const fs = require('fs');
-        const path = require('path');
-        const schemaPath = path.join(__dirname, 'postgresql', 'schema.sql');
-        const schema = fs.readFileSync(schemaPath, 'utf8');
-        
+    // 直接在代码中定义SQL模式，而不是从文件中读取
+        const schema = `
+        -- 创建objects表
+        CREATE TABLE IF NOT EXISTS objects (
+            path TEXT PRIMARY KEY,
+            content BYTEA,
+            content_type TEXT,
+            is_compressed BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+
+        -- 创建object_metadata表
+        CREATE TABLE IF NOT EXISTS object_metadata (
+            id SERIAL PRIMARY KEY,
+            path TEXT REFERENCES objects(path) ON DELETE CASCADE,
+            key TEXT NOT NULL,
+            value TEXT,
+            UNIQUE(path, key)
+        );
+
+        -- 创建object_headers表
+        CREATE TABLE IF NOT EXISTS object_headers (
+            id SERIAL PRIMARY KEY,
+            path TEXT REFERENCES objects(path) ON DELETE CASCADE,
+            header_type TEXT NOT NULL,
+            value TEXT,
+            UNIQUE(path, header_type)
+        );
+
+        -- 创建索引
+        CREATE INDEX IF NOT EXISTS idx_object_metadata_path ON object_metadata(path);
+        CREATE INDEX IF NOT EXISTS idx_object_headers_path ON object_headers(path);
+    
+        -- 创建更新时间触发器函数
+        CREATE OR REPLACE FUNCTION update_updated_at()
+        RETURNS TRIGGER AS $$
+        BEGIN
+            NEW.updated_at = CURRENT_TIMESTAMP;
+            RETURN NEW;
+        END;
+        $$ LANGUAGE plpgsql;
+
+        -- 为objects表添加触发器
+        DROP TRIGGER IF EXISTS update_objects_updated_at ON objects;
+        CREATE TRIGGER update_objects_updated_at
+        BEFORE UPDATE ON objects
+        FOR EACH ROW
+        EXECUTE FUNCTION update_updated_at();
+        `;
+    
         const client = await this.pool.connect();
         try {
             await client.query(schema);
             this.logger.info('数据库模式初始化成功');
         } catch (err) {
-            this.logger.error(err, '数据库模式初始化失败');
+            this.logger.error('初始化数据库模式失败', { err });
             throw err;
         } finally {
             client.release();
