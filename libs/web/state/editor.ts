@@ -5,6 +5,7 @@ import {
     MouseEvent as ReactMouseEvent,
     useState,
     useRef,
+    useEffect, 
 } from 'react';
 import { searchNote, searchRangeText } from 'libs/web/utils/search';
 import useFetcher from 'libs/web/api/fetcher';
