@@ -37,6 +37,8 @@ const MainEditor: FC<
         <EditorState.Provider initialState={note}>
             <article className={articleClassName}>
                 <EditTitle readOnly={props.readOnly} />
+                {!props.readOnly && <SaveButton />} {/* 添加保存按钮 */}
+                </div>
                 <Editor isPreview={isPreview} {...props} />
                 {!isPreview && <Backlinks />}
             </article>
