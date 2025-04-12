@@ -1,5 +1,12 @@
 {
-    "github": {
-        "silent": true
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next",
+      "config": {
+        "nodeVersion": "18.x"
+      }
     }
+  ]
 }
