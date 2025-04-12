@@ -63,6 +63,7 @@
         "next-themes": "^0.0.14",
         "notistack": "^1.0.7",
         "outline-icons": "^1.27.0",
+        "pg": "^8.14.1",
         "pino": "^8.7.0",
         "pino-pretty": "^9.1.1",
         "prosemirror-inputrules": "^1.1.3",
