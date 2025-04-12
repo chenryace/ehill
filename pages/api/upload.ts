@@ -5,7 +5,7 @@ import { useStore } from 'libs/server/middlewares/store';
 export default api()
     .use(useAuth)
     .use(useStore)
-    .post(async (req, res) => {
+    .post(async (_req, res) => {
         // 图片上传功能已被移除
         res.status(403).json({ 
             error: 'IMAGE_UPLOAD_DISABLED',
