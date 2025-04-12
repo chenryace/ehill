@@ -329,8 +329,12 @@ export function loadConfig(): Configuration {
 export function config(): Configuration {
     if (!loaded) {
         logger.debug('Loading configuration');
-        loadConfig();
+        loaded = loadConfig();
         logger.debug('Successfully loaded configuration');
+    }
+
+    if (!loaded) {
+        throw new Error('Configuration could not be loaded');
     }
 
     return loaded;
