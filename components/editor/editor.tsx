@@ -27,8 +27,13 @@ const Editor: FC<EditorProps> = ({ readOnly: propReadOnly, isPreview }) => {
         note,
         isEditing,
     } = EditorState.useContainer();
+    
+    // 首先定义editorReadOnly变量
+    const editorReadOnly = propReadOnly || !isEditing;
+    
+    // 然后再使用它来定义editorClassName
     const editorClassName = `px-4 md:px-0 ${editorReadOnly ? 'editor-readonly' : ''}`;
-    const readOnly = propReadOnly || !isEditing;
+    
     const height = use100vh();
     const mounted = useMounted();
     const editorTheme = useEditorTheme();
@@ -41,8 +46,6 @@ const Editor: FC<EditorProps> = ({ readOnly: propReadOnly, isPreview }) => {
         if (isPreview) return;
         setHasMinHeight((backlinks?.length ?? 0) <= 0);
     }, [backlinks, isPreview]);
-
-    const editorReadOnly = readOnly || !isEditing;
 
     return (
         <>
@@ -67,22 +70,6 @@ const Editor: FC<EditorProps> = ({ readOnly: propReadOnly, isPreview }) => {
                 embeds={embeds}
             />
             <style jsx global>{`
-                .editor-readonly .ProseMirror {
-                    cursor: default !important;
-                    pointer-events: auto !important;
-                }
-
-                /* 禁用只读模式下的编辑功能 */
-                .editor-readonly .ProseMirror * {
-                    caret-color: transparent;
-                }
-
-                /* 允许只读模式下的链接点击和滚动 */
-                .editor-readonly .ProseMirror a {
-                    cursor: pointer !important;
-                    pointer-events: auto !important;
-                }
-                
                 .ProseMirror ul {
                     list-style-type: disc;
                 }
@@ -115,6 +102,23 @@ const Editor: FC<EditorProps> = ({ readOnly: propReadOnly, isPreview }) => {
 
                 .ProseMirror .image .ProseMirror-selectednode img {
                     pointer-events: unset;
+                }
+                
+                /* 添加只读模式的样式 */
+                .editor-readonly .ProseMirror {
+                    cursor: default !important;
+                    pointer-events: auto !important;
+                }
+                
+                /* 禁用只读模式下的编辑功能 */
+                .editor-readonly .ProseMirror * {
+                    caret-color: transparent;
+                }
+                
+                /* 允许只读模式下的链接点击和滚动 */
+                .editor-readonly .ProseMirror a {
+                    cursor: pointer !important;
+                    pointer-events: auto !important;
                 }
             `}</style>
         </>
