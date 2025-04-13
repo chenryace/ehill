@@ -27,6 +27,7 @@ const Editor: FC<EditorProps> = ({ readOnly: propReadOnly, isPreview }) => {
         note,
         isEditing,
     } = EditorState.useContainer();
+    const editorClassName = `px-4 md:px-0 ${editorReadOnly ? 'editor-readonly' : ''}`;
     const readOnly = propReadOnly || !isEditing;
     const height = use100vh();
     const mounted = useMounted();
@@ -62,10 +63,26 @@ const Editor: FC<EditorProps> = ({ readOnly: propReadOnly, isPreview }) => {
                 dictionary={dictionary}
                 tooltip={Tooltip}
                 extensions={extensions}
-                className="px-4 md:px-0"
+                className={editorClassName}
                 embeds={embeds}
             />
             <style jsx global>{`
+                .editor-readonly .ProseMirror {
+                    cursor: default !important;
+                    pointer-events: auto !important;
+                }
+
+                /* 禁用只读模式下的编辑功能 */
+                .editor-readonly .ProseMirror * {
+                    caret-color: transparent;
+                }
+
+                /* 允许只读模式下的链接点击和滚动 */
+                .editor-readonly .ProseMirror a {
+                    cursor: pointer !important;
+                    pointer-events: auto !important;
+                }
+                
                 .ProseMirror ul {
                     list-style-type: disc;
                 }
