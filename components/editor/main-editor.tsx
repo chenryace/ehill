@@ -1,7 +1,6 @@
 import EditTitle from './edit-title';
 import Editor, { EditorProps } from './editor';
 import Backlinks from './backlinks';
-import SaveButton from './save-button';
 import EditorState from 'libs/web/state/editor';
 import UIState from 'libs/web/state/ui';
 import { FC } from 'react';
@@ -37,10 +36,7 @@ const MainEditor: FC<
     return (
         <EditorState.Provider initialState={note}>
             <article className={articleClassName}>
-                <div className="flex justify-between items-center mb-4">
-                    <EditTitle readOnly={props.readOnly} />
-                    {!props.readOnly && <SaveButton />} {/* 添加保存按钮 */}
-                </div>
+                <EditTitle readOnly={props.readOnly} />
                 <Editor isPreview={isPreview} {...props} />
                 {!isPreview && <Backlinks />}
             </article>
