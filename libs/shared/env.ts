@@ -13,7 +13,11 @@ type AllowedEnvs =
     | 'IS_DEMO'
     | 'STORE_PREFIX'
     | 'CONFIG_FILE'
-    | 'ALLOW_DEBUG';
+    | 'ALLOW_DEBUG'
+    | 'STORE_CONNECTION_STRING'
+    | 'STORE_TYPE'           
+    | 'SERVER_USE_SECURE_COOKIES'
+    | 'SERVER_BASE_URL';      
 
 /**
  * @deprecated This function should not be used. Prefer the `config()` system.
