@@ -161,15 +161,20 @@ const useEditor = (initNote?: NoteModel) => {
         setBackLinks(linkNotes);
     }, [note?.id]);
 
-    const [currentContent, setCurrentContent] = useState<string>('');
-    const [isEditing, setIsEditing] = useState(false);
-
     const onEditorChange = useCallback(
         (value: () => string): void => {
-            // 只更新本地状态，不触发保存
-            setCurrentContent(value());
+        // 只有在编辑模式下才更新内容
+            if (isEditing) {
+                console.log('保存内容:', value().substring(0, 50) + '...'); // 添加日志以便调试
+                onNoteChange.callback({ content: value() })
+                    .then(() => console.log('内容保存成功'))
+                    .catch((v) => {
+                        console.error('保存笔记时出错:', v);
+                        toast('保存失败，请重试', 'error'); // 添加错误提示
+                    });
+            }
         },
-        []
+        [onNoteChange, isEditing, toast]
     );
 
     // 添加初始内容加载
