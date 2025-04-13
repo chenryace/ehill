@@ -25,6 +25,7 @@ const Editor: FC<EditorProps> = ({ readOnly, isPreview }) => {
         backlinks,
         editorEl,
         note,
+        isEditing,
     } = EditorState.useContainer();
     const height = use100vh();
     const mounted = useMounted();
@@ -39,10 +40,14 @@ const Editor: FC<EditorProps> = ({ readOnly, isPreview }) => {
         setHasMinHeight((backlinks?.length ?? 0) <= 0);
     }, [backlinks, isPreview]);
 
+    // 根据isEditing状态和传入的readOnly属性决定编辑器是否只读
+    // 如果传入readOnly为true或isEditing为false，则编辑器为只读模式
+    const editorReadOnly = readOnly || !isEditing;
+
     return (
         <>
             <MarkdownEditor
-                readOnly={readOnly}
+                readOnly={editorReadOnly}
                 id={note?.id}
                 ref={editorEl}
                 value={mounted ? note?.content : ''}
