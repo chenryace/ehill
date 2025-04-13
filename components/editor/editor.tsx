@@ -14,7 +14,7 @@ export interface EditorProps extends Pick<Props, 'readOnly'> {
     isPreview?: boolean;
 }
 
-const Editor: FC<EditorProps> = ({ readOnly, isPreview }) => {
+const Editor: FC<EditorProps> = ({ readOnly: propReadOnly, isPreview }) => {
     const {
         onSearchLink,
         onCreateLink,
@@ -27,6 +27,7 @@ const Editor: FC<EditorProps> = ({ readOnly, isPreview }) => {
         note,
         isEditing,
     } = EditorState.useContainer();
+    const readOnly = propReadOnly || !isEditing;
     const height = use100vh();
     const mounted = useMounted();
     const editorTheme = useEditorTheme();
@@ -40,8 +41,6 @@ const Editor: FC<EditorProps> = ({ readOnly, isPreview }) => {
         setHasMinHeight((backlinks?.length ?? 0) <= 0);
     }, [backlinks, isPreview]);
 
-    // 根据isEditing状态和传入的readOnly属性决定编辑器是否只读
-    // 如果传入readOnly为true或isEditing为false，则编辑器为只读模式
     const editorReadOnly = readOnly || !isEditing;
 
     return (
