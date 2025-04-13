@@ -1,7 +1,6 @@
 import { StorePostgreSQL } from './providers/postgresql';
 import { StoreProvider } from './providers/base';
 import { config } from 'libs/server/config';
-import { PostgreSQLStoreConfiguration } from 'libs/server/config';
 
 export function createStore(): StoreProvider {
     const cfg = config().store;
@@ -14,4 +13,5 @@ export function createStore(): StoreProvider {
 }
 
 export { StoreProvider } from './providers/base';
+
 
