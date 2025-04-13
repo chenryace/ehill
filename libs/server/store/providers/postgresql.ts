@@ -57,10 +57,10 @@ export class StorePostgreSQL extends StoreProvider {
     /**
      * 获取签名URL（PostgreSQL实现不需要签名URL，返回空字符串）
      */
-    async getSignUrl(path: string, expires = 600): Promise<string> {
-        // PostgreSQL不需要签名URL，返回空字符串
-        return '';
-    }
+async getSignUrl(_path: string, _expires = 600): Promise<string> {
+    // PostgreSQL不需要签名URL，返回空字符串
+    return '';
+}
 
     /**
      * 检测对象是否存在
