@@ -5,6 +5,7 @@ import {
     MouseEvent as ReactMouseEvent,
     useState,
     useRef,
+    useEffect,
 } from 'react';
 import { searchNote, searchRangeText } from 'libs/web/utils/search';
 import useFetcher from 'libs/web/api/fetcher';
@@ -36,7 +37,28 @@ const onSearchLink = async (keyword: string) => {
     }));
 };
 
-const useEditor = (initNote?: NoteModel) => {
+// 定义EditorState容器的返回类型接口
+interface EditorStateType {
+    onCreateLink: (title: string) => Promise<string>;
+    onSearchLink: (keyword: string) => Promise<{ title: string; subtitle: string; url: string; }[]>;
+    onClickLink: (href: string) => void;
+    onUploadImage: (file: File, id?: string) => Promise<string>;
+    onHoverLink: (event: MouseEvent | ReactMouseEvent) => boolean;
+    getBackLinks: () => Promise<void>;
+    onEditorChange: (value: () => string) => void;
+    onNoteChange: {
+        callback: (data: Partial<NoteModel>) => Promise<void>;
+        cancel: () => void;
+        flush: () => void;
+    };
+    backlinks: NoteCacheItem[] | undefined;
+    editorEl: React.RefObject<MarkdownEditor>;
+    note: NoteModel | undefined;
+    isEditing: boolean;
+    toggleEditMode: () => void;
+}
+
+const useEditor = (initNote?: NoteModel): EditorStateType => {
     const {
         createNoteWithTitle,
         updateNote,
@@ -51,6 +73,22 @@ const useEditor = (initNote?: NoteModel) => {
     const { request, error } = useFetcher();
     const toast = useToast();
     const editorEl = useRef<MarkdownEditor>(null);
+    
+    // 添加编辑模式状态
+    const [isEditing, setIsEditing] = useState(false);
+    
+    // 检查是否为新建笔记，如果是则默认进入编辑模式
+    useEffect(() => {
+        const isNew = has(router.query, 'new');
+        if (isNew) {
+            setIsEditing(true);
+        }
+    }, [router.query]);
+
+    // 切换编辑模式的方法
+    const toggleEditMode = useCallback(() => {
+        setIsEditing((prev) => !prev);
+    }, []);
 
     const onNoteChange = useDebouncedCallback(
         async (data: Partial<NoteModel>) => {
@@ -162,10 +200,13 @@ const useEditor = (initNote?: NoteModel) => {
 
     const onEditorChange = useCallback(
         (value: () => string): void => {
-            onNoteChange.callback({ content: value() })
-                ?.catch((v) => console.error('Error whilst updating note: %O', v));
+            // 只有在编辑模式下才更新内容
+            if (isEditing) {
+                onNoteChange.callback({ content: value() })
+                    ?.catch((v) => console.error('Error whilst updating note: %O', v));
+            }
         },
-        [onNoteChange]
+        [onNoteChange, isEditing]
     );
 
     return {
@@ -180,9 +221,12 @@ const useEditor = (initNote?: NoteModel) => {
         backlinks,
         editorEl,
         note,
+        isEditing,
+        toggleEditMode,
     };
 };
 
-const EditorState = createContainer(useEditor);
+// 使用显式类型创建容器
+const EditorState = createContainer<EditorStateType, [NoteModel?]>(useEditor);
 
 export default EditorState;
