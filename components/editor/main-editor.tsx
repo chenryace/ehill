@@ -6,6 +6,7 @@ import UIState from 'libs/web/state/ui';
 import { FC } from 'react';
 import { NoteModel } from 'libs/shared/note';
 import { EDITOR_SIZE } from 'libs/shared/meta';
+import SaveButton from './save-button';
 
 const MainEditor: FC<
     EditorProps & {
@@ -36,7 +37,12 @@ const MainEditor: FC<
     return (
         <EditorState.Provider initialState={note}>
             <article className={articleClassName}>
-                <EditTitle readOnly={props.readOnly} />
+                <div className="flex justify-between items-center mb-4">
+                    <EditTitle readOnly={props.readOnly} />
+                     <div className="flex-shrink-0">
+                         <SaveButton />
+                    </div>
+                </div>
                 <Editor isPreview={isPreview} {...props} />
                 {!isPreview && <Backlinks />}
             </article>
