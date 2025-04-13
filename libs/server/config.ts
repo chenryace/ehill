@@ -27,13 +27,26 @@ export type BasicAuthConfiguration = { type: 'basic' } & (
 );
 export type AuthConfiguration = { type: 'none' } | BasicAuthConfiguration;
 
-export interface PostgreSQLStoreConfiguration {
-    connectionString: string;
+export interface S3StoreConfiguration {
+    type: 's3';
+    detectCredentials: boolean;
+    accessKey?: string;
+    secretKey?: string;
+    bucket: string;
+    endpoint: string;
+    region: string;
+    forcePathStyle: boolean;
     prefix: string;
-    proxyAttachments: boolean; 
+    proxyAttachments: boolean;
 }
 
-export type StoreConfiguration = PostgreSQLStoreConfiguration;
+export interface PostgreSQLStoreConfiguration {
+    type: 'postgresql';
+    connectionString: string;
+    prefix: string;
+}
+
+export type StoreConfiguration = S3StoreConfiguration | PostgreSQLStoreConfiguration;
 
 export interface ServerConfiguration {
     useSecureCookies: boolean;
@@ -219,6 +232,11 @@ export function loadConfigAndListErrors(): {
                             },
                         ],
                     });
+
+                    /*for (const user of auth.users) {
+                        user.username = user.username.toString();
+                        user.password = user.password.toString();
+                    }*/
                 } else {
                     auth.username = auth.username?.toString();
                     auth.password = auth.password.toString();
@@ -237,110 +255,143 @@ export function loadConfigAndListErrors(): {
         store = baseConfig.store;
     }
 
-    // PostgreSQL 存储配置
-    try {
-        // 获取连接字符串
-        tryElseAddError(
-            () => {
-                store.connectionString = process.env.STORE_CONNECTION_STRING || 
-                                         env.getEnvRaw('STORE_CONNECTION_STRING', false) || 
-                                         store.connectionString || '';
-            },
-            (e) => ({
-                name: 'PostgreSQL连接字符串未提供',
-                category: IssueCategory.CONFIG,
-                description: '未向Notea提供PostgreSQL连接字符串。',
+    // 检查存储类型
+    const storeType = env.getEnvRaw('STORE_TYPE', false) || store.type || 's3';
+    
+    if (storeType === 'postgresql') {
+        // PostgreSQL 存储配置
+        try {
+            (store as PostgreSQLStoreConfiguration).type = 'postgresql';
+            
+            // 获取连接字符串
+            tryElseAddError(
+                () => {
+                    (store as PostgreSQLStoreConfiguration).connectionString =
+                        env.getEnvRaw('STORE_CONNECTION_STRING', !(store as PostgreSQLStoreConfiguration).connectionString) ?? 
+                        (store as PostgreSQLStoreConfiguration).connectionString;
+                },
+                (e) => ({
+                    name: 'PostgreSQL连接字符串未提供',
+                    category: IssueCategory.CONFIG,
+                    description: '未向Notea提供PostgreSQL连接字符串。',
+                    severity: IssueSeverity.FATAL_ERROR,
+                    cause: coerceToValidCause(e),
+                    fixes: [
+                        {
+                            description: '设置STORE_CONNECTION_STRING环境变量',
+                            recommendation: IssueFixRecommendation.RECOMMENDED,
+                        },
+                        {
+                            description: '在配置文件中设置store.connectionString',
+                            recommendation: IssueFixRecommendation.RECOMMENDED,
+                        },
+                    ],
+                })
+            );
+            
+            // 获取前缀
+            (store as PostgreSQLStoreConfiguration).prefix =
+                env.getEnvRaw('STORE_PREFIX', false) ?? 
+                (store as PostgreSQLStoreConfiguration).prefix ?? '';
+        } catch (e) {
+            errors.push({
+                name: ErrTitle.INVALID_STORE_CONFIG,
+                description: '无法加载PostgreSQL存储配置',
                 severity: IssueSeverity.FATAL_ERROR,
+                category: IssueCategory.CONFIG,
                 cause: coerceToValidCause(e),
-                fixes: [
-                    {
-                        description: '设置STORE_CONNECTION_STRING环境变量',
-                        recommendation: IssueFixRecommendation.RECOMMENDED,
-                    },
-                    {
-                        description: '在配置文件中设置store.connectionString',
-                        recommendation: IssueFixRecommendation.RECOMMENDED,
-                    },
-                ],
-            })
-        );
-        
-        // 获取前缀
-        store.prefix =
-            env.getEnvRaw('STORE_PREFIX', false) ?? 
-            store.prefix ?? '';
-        (store as PostgreSQLStoreConfiguration).proxyAttachments = 
-            process.env.PROXY_ATTACHMENTS === 'true' || 
-            (store as PostgreSQLStoreConfiguration).proxyAttachments || 
-            true; // 默认设为true，确保链接正常工作
-    } catch (e) {
-        errors.push({
-            name: ErrTitle.INVALID_STORE_CONFIG,
-            description: '无法加载PostgreSQL存储配置',
-            severity: IssueSeverity.FATAL_ERROR,
-            category: IssueCategory.CONFIG,
-            cause: coerceToValidCause(e),
-            fixes: [],
-        });
-    }
-
-    let server: ServerConfiguration;
-    if (!baseConfig.server) {
-        server = {} as ServerConfiguration;
-    } else {
-        server = baseConfig.server;
-    }
-    {
-        server.useSecureCookies = env.parseBool(
-            env.getEnvRaw('COOKIE_SECURE', false),
-            server.useSecureCookies ?? process.env.NODE_ENV === 'production'
-        );
-        server.baseUrl = env.getEnvRaw('BASE_URL', false) ?? server.baseUrl;
-    }
-
-    return {
-        config: {
-            auth,
-            store,
-            server,
-        },
-        errors,
-    };
-}
-
-const MAX_ERRORS = 2;
-export function loadConfig(): Configuration {
-    const result = loadConfigAndListErrors();
-
-    if (!result.config) {
-        const { errors } = result;
-        let name = errors
-            .slice(0, MAX_ERRORS)
-            .map((v) => v.name)
-            .join(', ');
-        if (errors.length > MAX_ERRORS) {
-            const rest = errors.length - MAX_ERRORS;
-            name += ' and ' + rest + ' other error' + (rest > 1 ? 's' : '');
+                fixes: [],
+            });
         }
-        throw new Error(name);
-    }
-
-    loaded = result.config;
-
-    // 确保返回的是 Configuration 类型，而不是 undefined
-    return result.config;
-}
-
-export function config(): Configuration {
-    if (!loaded) {
-        logger.debug('Loading configuration');
-        loaded = loadConfig();
-        logger.debug('Successfully loaded configuration');
-    }
-
-    if (!loaded) {
-        throw new Error('Configuration could not be loaded');
-    }
-
-    return loaded;
-}
+    } else {
+        // S3 存储配置 (默认)
+        try {
+            (store as S3StoreConfiguration).type = 's3';
+            (store as S3StoreConfiguration).detectCredentials ??= true;
+            tryElseAddError(
+                () => {
+                    (store as S3StoreConfiguration).accessKey =
+                        env.getEnvRaw(
+                            'STORE_ACCESS_KEY',
+                            !(store as S3StoreConfiguration).detectCredentials && !(store as S3StoreConfiguration).accessKey
+                        ) ?? (store as S3StoreConfiguration).accessKey;
+                },
+                (e) => ({
+                    name: 'Store access key was not provided',
+                    category: IssueCategory.CONFIG,
+                    description:
+                        'The store access key was not provided to Notea, and detecting credentials is disabled.',
+                    severity: IssueSeverity.FATAL_ERROR,
+                    cause: coerceToValidCause(e),
+                    fixes: [
+                        {
+                            description:
+                                'Set the STORE_ACCESS_KEY environment variable',
+                            recommendation: IssueFixRecommendation.RECOMMENDED,
+                        },
+                        {
+                            description:
+                                'Set store.accessKey in the configuration file',
+                            recommendation: IssueFixRecommendation.RECOMMENDED,
+                        },
+                        {
+                            description: 'Allow autodetection of credentials',
+                            recommendation: IssueFixRecommendation.NEUTRAL,
+                        },
+                    ],
+                })
+            );
+            tryElseAddError(
+                () => {
+                    (store as S3StoreConfiguration).secretKey =
+                        env.getEnvRaw(
+                            'STORE_SECRET_KEY',
+                            !(store as S3StoreConfiguration).detectCredentials && !(store as S3StoreConfiguration).secretKey
+                        ) ?? (store as S3StoreConfiguration).secretKey;
+                },
+                (e) => ({
+                    name: 'Store secret key was not provided',
+                    category: IssueCategory.CONFIG,
+                    description:
+                        'The store secret key was not provided to Notea, and detecting credentials is disabled.',
+                    severity: IssueSeverity.FATAL_ERROR,
+                    cause: coerceToValidCause(e),
+                    fixes: [
+                        {
+                            description:
+                                'Set the STORE_SECRET_KEY environment variable',
+                            recommendation: IssueFixRecommendation.RECOMMENDED,
+                        },
+                        {
+                            description:
+                                'Set store.secretKey in the configuration file',
+                            recommendation: IssueFixRecommendation.RECOMMENDED,
+                        },
+                        {
+                            description: 'Allow autodetection of credentials',
+                            recommendation: IssueFixRecommendation.NEUTRAL,
+                        },
+                    ],
+                })
+            );
+            (store as S3StoreConfiguration).bucket = env.getEnvRaw('STORE_BUCKET', false) ?? 'notea';
+            (store as S3StoreConfiguration).forcePathStyle =
+                env.parseBool(env.getEnvRaw('STORE_FORCE_PATH_STYLE', false)) ??
+                (store as S3StoreConfiguration).forcePathStyle ??
+                false;
+            tryElseAddError(
+                () => {
+                    (store as S3StoreConfiguration).endpoint =
+                        env.getEnvRaw('STORE_END_POINT', (store as S3StoreConfiguration).endpoint == null) ??
+                        (store as S3StoreConfiguration).endpoint;
+                },
+                (e) => ({
+                    name: 'Store endpoint was not provided',
+                    category: IssueCategory.CONFIG,
+                    description: 'The store endpoint was not provided to Notea.',
+                    severity: IssueSeverity.FATAL_ERROR,
+                    cause: coerceToValidCause(e),
+                    fixes: [
+                        {
+                            descr
+(Content truncated due to size limit. Use line ranges to read in chunks)

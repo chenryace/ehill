@@ -5,7 +5,6 @@ import {
     MouseEvent as ReactMouseEvent,
     useState,
     useRef,
-    useEffect, 
 } from 'react';
 import { searchNote, searchRangeText } from 'libs/web/utils/search';
 import useFetcher from 'libs/web/api/fetcher';
@@ -161,67 +160,12 @@ const useEditor = (initNote?: NoteModel) => {
         setBackLinks(linkNotes);
     }, [note?.id]);
 
-    const [currentContent, setCurrentContent] = useState<string>('');
-    const [isEditing, setIsEditing] = useState<boolean>(false);
-
     const onEditorChange = useCallback(
         (value: () => string): void => {
-            // 只更新本地状态，不触发保存
-            setCurrentContent(value());
+            onNoteChange.callback({ content: value() })
+                ?.catch((v) => console.error('Error whilst updating note: %O', v));
         },
-        []
-    );
-
-        // 添加初始内容加载
-    useEffect(() => {
-        if (note?.content) {
-            setCurrentContent(note.content);
-        }
-    }, [note?.content]);
-    
-    // 添加未保存内容提示
-    useEffect(() => {
-        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-            if (isEditing && currentContent !== note?.content) {
-                const message = '您有未保存的更改，确定要离开吗？';
-                e.returnValue = message;
-                return message;
-            }
-        };
-    
-        window.addEventListener('beforeunload', handleBeforeUnload);
-        return () => {
-            window.removeEventListener('beforeunload', handleBeforeUnload);
-        };
-    }, [isEditing, currentContent, note?.content]);
-
-    const saveNote = useCallback(
-        async () => {
-            if (currentContent) {
-                try {
-                    await onNoteChange.callback({ content: currentContent });
-                    toast('笔记已保存', 'success');
-                    setIsEditing(false);
-                } catch (error) {
-                    console.error('Error whilst updating note: %O', error);
-                    toast('保存失败，请重试', 'error');
-                }
-            }
-        },
-        [currentContent, onNoteChange, toast]
-    );
-
-    const toggleEditMode = useCallback(
-        () => {
-            if (isEditing) {
-                // 如果当前是编辑模式，保存笔记
-                saveNote();
-            } else {
-                // 如果当前是预览模式，切换到编辑模式
-                setIsEditing(true);
-            }
-        },
-        [isEditing, saveNote]
+        [onNoteChange]
     );
 
     return {
@@ -236,11 +180,6 @@ const useEditor = (initNote?: NoteModel) => {
         backlinks,
         editorEl,
         note,
-        saveNote,
-        toggleEditMode,
-        isEditing,
-        setIsEditing,
-        currentContent    
     };
 };
 
