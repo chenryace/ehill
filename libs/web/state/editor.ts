@@ -5,7 +5,7 @@ import {
     MouseEvent as ReactMouseEvent,
     useState,
     useRef,
-    useEffect,
+    useEffect, 
 } from 'react';
 import { searchNote, searchRangeText } from 'libs/web/utils/search';
 import useFetcher from 'libs/web/api/fetcher';
@@ -37,28 +37,7 @@ const onSearchLink = async (keyword: string) => {
     }));
 };
 
-// 定义EditorState容器的返回类型接口
-interface EditorStateType {
-    onCreateLink: (title: string) => Promise<string>;
-    onSearchLink: (keyword: string) => Promise<{ title: string; subtitle: string; url: string; }[]>;
-    onClickLink: (href: string) => void;
-    onUploadImage: (file: File, id?: string) => Promise<string>;
-    onHoverLink: (event: MouseEvent | ReactMouseEvent) => boolean;
-    getBackLinks: () => Promise<void>;
-    onEditorChange: (value: () => string) => void;
-    onNoteChange: {
-        callback: (data: Partial<NoteModel>) => Promise<void>;
-        cancel: () => void;
-        flush: () => void;
-    };
-    backlinks: NoteCacheItem[] | undefined;
-    editorEl: React.RefObject<MarkdownEditor>;
-    note: NoteModel | undefined;
-    isEditing: boolean;
-    toggleEditMode: () => void;
-}
-
-const useEditor = (initNote?: NoteModel): EditorStateType => {
+const useEditor = (initNote?: NoteModel) => {
     const {
         createNoteWithTitle,
         updateNote,
@@ -73,22 +52,6 @@ const useEditor = (initNote?: NoteModel): EditorStateType => {
     const { request, error } = useFetcher();
     const toast = useToast();
     const editorEl = useRef<MarkdownEditor>(null);
-    
-    // 添加编辑模式状态
-    const [isEditing, setIsEditing] = useState(false);
-    
-    // 检查是否为新建笔记，如果是则默认进入编辑模式
-    useEffect(() => {
-        const isNew = has(router.query, 'new');
-        if (isNew) {
-            setIsEditing(true);
-        }
-    }, [router.query]);
-
-    // 切换编辑模式的方法
-    const toggleEditMode = useCallback(() => {
-        setIsEditing((prev) => !prev);
-    }, []);
 
     const onNoteChange = useDebouncedCallback(
         async (data: Partial<NoteModel>) => {
@@ -198,16 +161,69 @@ const useEditor = (initNote?: NoteModel): EditorStateType => {
         setBackLinks(linkNotes);
     }, [note?.id]);
 
+    const [currentContent, setCurrentContent] = useState<string>('');
+    const [isEditing, setIsEditing] = useState(false);
+
     const onEditorChange = useCallback(
         (value: () => string): void => {
-            // 只有在编辑模式下才更新内容
-            if (isEditing) {
-                onNoteChange.callback({ content: value() })
-                    ?.catch((v) => console.error('Error whilst updating note: %O', v));
+            // 只更新本地状态，不触发保存
+            setCurrentContent(value());
+        },
+        []
+    );
+
+    // 添加初始内容加载
+    useEffect(() => {
+        if (note?.content) {
+            setCurrentContent(note.content);
+        }
+    }, [note?.content]);
+
+
+    useEffect(() => {
+        // 检查是否为新建笔记
+        const isNew = has(router.query, 'new');
+        if (isNew) {
+            // 如果是新建笔记，自动设置为编辑状态
+            setIsEditing(true);
+        }
+    }, [router.query]);
+    
+    // 添加未保存内容提示
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (isEditing && currentContent !== note?.content) {
+                const message = '您有未保存的更改，确定要离开吗？';
+                e.returnValue = message;
+                return message;
+            }
+        };
+    
+        window.addEventListener('beforeunload', handleBeforeUnload);
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, [isEditing, currentContent, note?.content]);
+
+    const saveNote = useCallback(
+        async () => {
+            if (currentContent) {
+                try {
+                    await onNoteChange.callback({ content: currentContent });
+                    toast('笔记已保存', 'success');
+                    setIsEditing(false);
+                } catch (error) {
+                    console.error('Error whilst updating note: %O', error);
+                    toast('保存失败，请重试', 'error');
+                }
             }
         },
-        [onNoteChange, isEditing]
+        [currentContent, onNoteChange, toast]
     );
+
+    const toggleEditMode = useCallback(() => {
+        setIsEditing((prev) => !prev);
+    }, []);
 
     return {
         onCreateLink,
@@ -221,12 +237,24 @@ const useEditor = (initNote?: NoteModel): EditorStateType => {
         backlinks,
         editorEl,
         note,
-        isEditing,
+        saveNote,
         toggleEditMode,
+        isEditing,
+        setIsEditing,
+        currentContent    
     };
 };
 
-// 使用显式类型创建容器
-const EditorState = createContainer<EditorStateType, [NoteModel?]>(useEditor);
+const EditorState = createContainer(useEditor);
+
+declare module 'unstated-next' {
+    interface ContainerType<State, Initializers extends unknown[]> {
+        Provider: React.FC<{
+            initialState?: Initializers[0];
+            children: React.ReactNode;
+        }>;
+        useContainer: () => State;
+    }
+}
 
 export default EditorState;
