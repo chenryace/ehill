@@ -30,7 +30,6 @@ const Editor: FC<EditorProps> = memo(({ readOnly: propReadOnly, isPreview }) => 
         toggleEditMode,
         saveNote,
         isSaving,
-        currentContent,
     } = EditorState.useContainer();
     
     // 首先定义editorReadOnly变量
@@ -215,6 +214,6 @@ const Editor: FC<EditorProps> = memo(({ readOnly: propReadOnly, isPreview }) => 
             `}</style>
         </>
     );
-};
+});
 
 export default Editor;
