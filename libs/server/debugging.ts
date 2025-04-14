@@ -91,28 +91,18 @@ const loggerTransport: Parameters<typeof pino.multistream>[0] = [
     }
 ];
 
-// 获取日志文件路径
-const logFilePath = getLogFile('debug');
-// 只有在日志文件路径有效时才添加文件日志
-if (logFilePath) {
-    try {
+// 获取日志文件路径并添加文件日志
+try {
+    const logFilePath = getLogFile('debug');
+    // 只有在日志文件路径有效时才添加文件日志
+    if (logFilePath !== null) {
         loggerTransport.push({
             stream: fs.createWriteStream(logFilePath, { flags: 'a' }),
             level: "debug"
         });
-    } catch (e) {
-        console.warn("无法创建文件日志:", e);
     }
-}
-
-try {
-    loggerTransport.push({
-        stream: fs.createWriteStream(getLogFile('debug'), { flags: 'a' }),
-        level: "debug"
-    });
 } catch (e) {
-    // well, whoops!
-    console.warn("No file logs: %O", e);
+    console.warn("无法创建文件日志:", e);
 }
 
 const multistream = pino.multistream(loggerTransport);
