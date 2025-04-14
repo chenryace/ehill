@@ -65,9 +65,8 @@ const Editor: FC<EditorProps> = memo(({ readOnly: propReadOnly, isPreview }) => 
         e.preventDefault();
         if (isEditing) {
             saveNote?.();
-            toast('笔记已保存', 'success');
         }
-    }, { enableOnTags: ['INPUT', 'TEXTAREA', 'SELECT'] }, [isEditing, saveNote, toast]);
+    }, { enableOnTags: ['INPUT', 'TEXTAREA', 'SELECT'] }, [isEditing, saveNote]);
     
     useHotkeys('ctrl+e, cmd+e', (e) => {
         e.preventDefault();
