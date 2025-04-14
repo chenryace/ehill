@@ -260,12 +260,63 @@ const useEditor = (initNote?: NoteModel) => {
     }, [note?.content]);
 
     // 检查是否为新建笔记，如果是则默认进入编辑模式
+    // 同时添加路由变化时的状态重置逻辑
     useEffect(() => {
-        const isNew = has(router.query, 'new');
-        if (isNew) {
-            setIsEditing(true);
+        // 创建一个标志，表示组件是否已卸载
+        let isMounted = true;
+        
+        try {
+            const isNew = has(router.query, 'new');
+            
+            // 只有在组件挂载状态下才更新状态
+            if (isMounted) {
+                if (isNew) {
+                    setIsEditing(true);
+                } else {
+                    // 非新建笔记时，确保编辑状态为false（预览模式）
+                    // 这可以防止在路由变化时意外进入编辑模式
+                    setIsEditing(false);
+                }
+            }
+        } catch (err) {
+            console.error('处理路由变化时出错:', err);
+            // 出错时不改变编辑状态，保持当前状态
         }
-    }, [router.query]);
+        
+        // 添加路由变化事件监听
+        const handleRouteChangeStart = () => {
+            // 路由开始变化时，记录当前状态但不立即改变
+            console.log('路由开始变化，当前编辑状态:', isEditing);
+        };
+        
+        const handleRouteChangeComplete = () => {
+            // 路由变化完成后，如果不是新建笔记，确保是预览模式
+            if (isMounted && !has(router.query, 'new')) {
+                setIsEditing(false);
+            }
+        };
+        
+        const handleRouteChangeError = (err: Error) => {
+            // 路由变化出错时，记录错误但不改变编辑状态
+            console.error('路由变化出错:', err);
+            // 特别处理"Loading initial props cancelled"错误
+            if (err.message.includes('Loading initial props cancelled')) {
+                console.warn('检测到路由取消错误，保持当前编辑状态不变');
+            }
+        };
+        
+        router.events.on('routeChangeStart', handleRouteChangeStart);
+        router.events.on('routeChangeComplete', handleRouteChangeComplete);
+        router.events.on('routeChangeError', handleRouteChangeError);
+        
+        return () => {
+            // 组件卸载时，更新标志并移除事件监听
+            isMounted = false;
+            router.events.off('routeChangeStart', handleRouteChangeStart);
+            router.events.off('routeChangeComplete', handleRouteChangeComplete);
+            router.events.off('routeChangeError', handleRouteChangeError);
+        };
+    }, [router.query, router.events]);
     
     // 添加未保存内容提示
     useEffect(() => {
