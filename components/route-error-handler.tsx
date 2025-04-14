@@ -63,7 +63,8 @@ const RouteErrorHandler = () => {
       
       // 对于其他错误，调用原始错误处理器
       if (originalErrorHandler) {
-        return originalErrorHandler(message, source, lineno, colno, error);
+        // 使用call方法绑定正确的this上下文
+        return originalErrorHandler.call(window, message, source, lineno, colno, error);
       }
       return false;
     };
@@ -87,7 +88,8 @@ const RouteErrorHandler = () => {
       
       // 对于其他未处理的Promise错误，调用原始处理器
       if (originalUnhandledRejection) {
-        return originalUnhandledRejection(event);
+        // 使用call方法绑定正确的this上下文
+        return originalUnhandledRejection.call(window, event);
       }
       return false;
     };
