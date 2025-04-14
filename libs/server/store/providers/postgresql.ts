@@ -70,9 +70,9 @@ export class StorePostgreSQL extends StoreProvider {
           try {
             await client.query(schema);
             this.logger.info('数据库模式初始化成功');
-          } catch (err) {
+          } catch (err: unknown) {
             // 检查是否是表已存在的错误，如果是则忽略
-            if (err.message && err.message.includes('already exists')) {
+            if (err instanceof Error && err.message && err.message.includes('already exists')) {
               this.logger.info('数据库模式已存在，跳过初始化');
             } else {
               this.logger.error(err, '数据库模式初始化失败');
@@ -81,7 +81,7 @@ export class StorePostgreSQL extends StoreProvider {
           } finally {
             client.release();
           }
-        } catch (err) {
+        } catch (err: unknown) {
           this.logger.error(err, '初始化数据库模式过程中发生错误');
           // 不抛出错误，让应用继续运行
         }
