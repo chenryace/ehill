@@ -299,9 +299,13 @@ const useEditor = (initNote?: NoteModel) => {
         const handleRouteChangeError = (err: Error) => {
             // 路由变化出错时，记录错误但不改变编辑状态
             console.error('路由变化出错:', err);
-            // 特别处理"Loading initial props cancelled"错误
-            if (err.message.includes('Loading initial props cancelled')) {
+            // 特别处理"Loading initial props cancelled"错误和"Route Cancelled"错误
+            if (err.message.includes('Loading initial props cancelled') || 
+                err.message.includes('Route Cancelled')) {
+                // 将错误级别从error降为warn，避免在控制台显示为错误
                 console.warn('检测到路由取消错误，保持当前编辑状态不变');
+                // 阻止错误继续传播
+                return true;
             }
         };
         
