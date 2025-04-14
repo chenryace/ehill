@@ -7,6 +7,7 @@ import UIState from 'libs/web/state/ui';
 import EditTitle from './edit-title';
 import SaveButton from './save-button';
 import { EditorProps } from './editor';
+import ErrorBoundary from '../error-boundary';
 
 // 使用动态导入和React.memo优化性能
 const Editor = dynamic(() => import('./editor'), { ssr: false });
@@ -14,6 +15,24 @@ const Backlinks = dynamic(() => import('./backlinks'), {
   ssr: false,
   loading: () => <div className="mt-8 text-gray-400">加载反向链接...</div>
 });
+
+// 编辑器错误降级UI
+const EditorFallback = () => (
+  <div className="editor-error-fallback">
+    <h3>编辑器加载出错</h3>
+    <p>抱歉，编辑器内容加载时出现了问题。这可能是由于内容过大或网络问题导致的。</p>
+    <p>您可以尝试刷新页面，或返回上一页。</p>
+    <style jsx>{`
+      .editor-error-fallback {
+        padding: 20px;
+        margin: 20px 0;
+        border: 1px solid #e0e0e0;
+        border-radius: 4px;
+        background-color: #f8f9fa;
+      }
+    `}</style>
+  </div>
+);
 
 const MainEditor: FC<
     EditorProps & {
@@ -44,21 +63,37 @@ const MainEditor: FC<
     const articleClassName =
         className || `pt-16 md:pt-40 px-6 m-auto h-full ${editorWidthClass}`;
 
+    // 错误处理回调
+    const handleEditorError = (error: Error) => {
+        console.error('编辑器组件发生错误:', error);
+        // 这里可以添加错误上报或其他处理逻辑
+    };
+
     return (
         <EditorState.Provider initialState={note}>
-            <article className={articleClassName}>
-                <div className="flex justify-between items-center mb-4">
-                    <EditTitle readOnly={props.readOnly} />
-                    <div className="flex-shrink-0">
-                        <SaveButton />
-                    </div>
-                </div>
-                <Editor isPreview={isPreview} {...props} />
-                {!isPreview && <Backlinks />}
-            </article>
+            <ErrorBoundary 
+              onError={handleEditorError}
+              fallback={<EditorFallback />}
+            >
+              <article className={articleClassName}>
+                  <div className="flex justify-between items-center mb-4">
+                      <EditTitle readOnly={props.readOnly} />
+                      <div className="flex-shrink-0">
+                          <SaveButton />
+                      </div>
+                  </div>
+                  <Editor isPreview={isPreview} {...props} />
+                  {!isPreview && <Backlinks />}
+              </article>
+            </ErrorBoundary>
         </EditorState.Provider>
     );
 });
+
+// 添加显示名称以便于调试
+MainEditor.displayName = 'MainEditor';
+
+export default MainEditor;
 
 // 添加显示名称以便于调试
 MainEditor.displayName = 'MainEditor';
