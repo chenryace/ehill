@@ -305,18 +305,22 @@ const useEditor = (initNote?: NoteModel) => {
             }
         };
         
-        router.events.on('routeChangeStart', handleRouteChangeStart);
-        router.events.on('routeChangeComplete', handleRouteChangeComplete);
-        router.events.on('routeChangeError', handleRouteChangeError);
+        if (router.events) {
+            router.events.on('routeChangeStart', handleRouteChangeStart);
+            router.events.on('routeChangeComplete', handleRouteChangeComplete);
+            router.events.on('routeChangeError', handleRouteChangeError);
+        }
         
         return () => {
             // 组件卸载时，更新标志并移除事件监听
             isMounted = false;
-            router.events.off('routeChangeStart', handleRouteChangeStart);
-            router.events.off('routeChangeComplete', handleRouteChangeComplete);
-            router.events.off('routeChangeError', handleRouteChangeError);
+            if (router.events) {
+                router.events.off('routeChangeStart', handleRouteChangeStart);
+                router.events.off('routeChangeComplete', handleRouteChangeComplete);
+                router.events.off('routeChangeError', handleRouteChangeError);
+            }
         };
-    }, [router.query, router.events]);
+    }, [router.query, isEditing]);
     
     // 添加未保存内容提示
     useEffect(() => {
