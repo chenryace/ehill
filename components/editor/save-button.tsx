@@ -2,12 +2,22 @@ import { FC, memo } from 'react';
 import EditorState from 'libs/web/state/editor';
 
 const SaveButton: FC = memo(() => {
-    const { isEditing, toggleEditMode, isSaving } = EditorState.useContainer();
+    const { isEditing, toggleEditMode, saveNote, isSaving } = EditorState.useContainer();
+
+    const handleClick = () => {
+        if (isEditing) {
+            // 在编辑模式下，点击按钮保存笔记
+            saveNote();
+        } else {
+            // 在预览模式下，点击按钮进入编辑模式
+            toggleEditMode();
+        }
+    };
 
     return (
         <div className="toggle-switch-container">
             <button
-                onClick={toggleEditMode}
+                onClick={handleClick}
                 className="toggle-switch"
                 title={isEditing ? "保存" : "编辑"}
                 aria-label={isEditing ? "保存" : "编辑"}
