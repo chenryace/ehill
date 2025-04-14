@@ -67,7 +67,7 @@ const Editor: FC<EditorProps> = memo(({ readOnly: propReadOnly, isPreview }) => 
             saveNote?.();
             toast('笔记已保存', 'success');
         }
-    }, { enableOnFormTags: true }, [isEditing, saveNote, toast]);
+    }, { enableOnTags: true }, [isEditing, saveNote, toast]);
     
     useHotkeys('ctrl+e, cmd+e', (e) => {
         e.preventDefault();
