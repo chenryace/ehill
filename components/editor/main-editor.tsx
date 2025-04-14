@@ -94,8 +94,3 @@ const MainEditor: FC<
 MainEditor.displayName = 'MainEditor';
 
 export default MainEditor;
-
-// 添加显示名称以便于调试
-MainEditor.displayName = 'MainEditor';
-
-export default MainEditor;
