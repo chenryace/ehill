@@ -38,17 +38,33 @@ export class StorePostgreSQL extends StoreProvider {
      */
     private async initSchema() {
         try {
-          const fs = require('fs');
-          const path = require('path');
-          const schemaPath = path.join(__dirname, 'postgresql', 'schema.sql');
+          // 内联SQL模式，避免依赖外部文件
+          const schema = `
+          CREATE TABLE IF NOT EXISTS objects (
+              path TEXT PRIMARY KEY,
+              content BYTEA NOT NULL,
+              content_type TEXT,
+              is_compressed BOOLEAN DEFAULT FALSE,
+              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+              updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          );
           
-          // 检查文件是否存在
-          if (!fs.existsSync(schemaPath)) {
-            this.logger.warn('数据库模式文件不存在:', schemaPath);
-            return;
-          }
+          CREATE TABLE IF NOT EXISTS object_metadata (
+              path TEXT NOT NULL,
+              key TEXT NOT NULL,
+              value TEXT NOT NULL,
+              PRIMARY KEY (path, key),
+              FOREIGN KEY (path) REFERENCES objects(path) ON DELETE CASCADE
+          );
           
-          const schema = fs.readFileSync(schemaPath, 'utf8');
+          CREATE TABLE IF NOT EXISTS object_headers (
+              path TEXT NOT NULL,
+              header_type TEXT NOT NULL,
+              value TEXT NOT NULL,
+              PRIMARY KEY (path, header_type),
+              FOREIGN KEY (path) REFERENCES objects(path) ON DELETE CASCADE
+          );
+          `;
           
           const client = await this.pool.connect();
           try {
@@ -69,13 +85,12 @@ export class StorePostgreSQL extends StoreProvider {
           this.logger.error(err, '初始化数据库模式过程中发生错误');
           // 不抛出错误，让应用继续运行
         }
-      }
     }
 
-async getSignUrl(_path: string, _expires = 600): Promise<string> {
-    // PostgreSQL不需要签名URL，返回空字符串
-    return '';
-}
+    async getSignUrl(_path: string, _expires = 600): Promise<string> {
+        // PostgreSQL不需要签名URL，返回空字符串
+        return '';
+    }
 
     /**
      * 检测对象是否存在

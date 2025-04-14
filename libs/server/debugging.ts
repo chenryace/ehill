@@ -64,15 +64,24 @@ export function collectDebugInformation(): DebugInformation {
 }
 
 function getLogFile(name: string) {
-    const dir = path.resolve(process.cwd(), process.env.LOG_DIRECTORY ?? 'logs');
+    // 检测是否在Vercel环境中
+    const isVercel = process.env.VERCEL === '1';
+    // 根据环境选择日志目录
+    const dir = isVercel 
+        ? path.resolve('/tmp/logs') 
+        : path.resolve(process.cwd(), process.env.LOG_DIRECTORY ?? 'logs');
 
-    if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, {
-            recursive: true
-        });
+    try {
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, {
+                recursive: true
+            });
+        }
+        return path.resolve(dir, `${name}.log`);
+    } catch (e) {
+        console.warn(`无法创建日志目录 ${dir}:`, e);
+        return null;
     }
-
-    return path.resolve(dir, `${name}.log`);
 }
 
 const loggerTransport: Parameters<typeof pino.multistream>[0] = [
@@ -81,6 +90,21 @@ const loggerTransport: Parameters<typeof pino.multistream>[0] = [
         level: "info"
     }
 ];
+
+// 获取日志文件路径
+const logFilePath = getLogFile('debug');
+// 只有在日志文件路径有效时才添加文件日志
+if (logFilePath) {
+    try {
+        loggerTransport.push({
+            stream: fs.createWriteStream(logFilePath, { flags: 'a' }),
+            level: "debug"
+        });
+    } catch (e) {
+        console.warn("无法创建文件日志:", e);
+    }
+}
+
 try {
     loggerTransport.push({
         stream: fs.createWriteStream(getLogFile('debug'), { flags: 'a' }),
@@ -100,9 +124,4 @@ export function createLogger(name: string): Logger {
     }, multistream);
 }
 
-const isVercel = process.env.VERCEL === '1';
-const dir = isVercel 
-    ? path.resolve('/tmp/logs') 
-    : path.resolve(process.cwd(), process.env.LOG_DIRECTORY ?? 'logs');
-    
 export type { Logger };

@@ -52,21 +52,50 @@ const useEditor = (initNote?: NoteModel) => {
     const { request, error } = useFetcher();
     const toast = useToast();
     const editorEl = useRef<MarkdownEditor>(null);
+    
+    // 添加编辑模式状态
+    const [isEditing, setIsEditing] = useState(false);
+    // 添加当前内容状态
+    const [currentContent, setCurrentContent] = useState<string>('');
+    // 添加保存状态
+    const [isSaving, setIsSaving] = useState(false);
 
     const onNoteChange = useDebouncedCallback(
         async (data: Partial<NoteModel>) => {
-            const isNew = has(router.query, 'new');
+            try {
+                setIsSaving(true);
+                const isNew = has(router.query, 'new');
 
-            if (isNew) {
-                data.pid = (router.query.pid as string) || ROOT_ID;
-                const item = await createNote({ ...note, ...data });
-                const noteUrl = `/${item?.id}`;
+                if (isNew) {
+                    data.pid = (router.query.pid as string) || ROOT_ID;
+                    const item = await createNote({ ...note, ...data });
+                    const noteUrl = `/${item?.id}`;
 
-                if (router.asPath !== noteUrl) {
-                    await router.replace(noteUrl, undefined, { shallow: true });
+                    if (router.asPath !== noteUrl) {
+                        await router.replace(noteUrl, undefined, { shallow: true });
+                    }
+                    
+                    // 成功创建笔记后显示提示
+                    toast('笔记创建成功', 'success');
+                } else {
+                    await updateNote(data);
+                    // 成功更新笔记后显示提示
+                    toast('笔记保存成功', 'success');
                 }
-            } else {
-                await updateNote(data);
+            } catch (err) {
+                console.error('保存笔记时出错:', err);
+                toast('保存失败，请重试', 'error');
+                
+                // 如果是网络错误，提供更具体的提示
+                if (err instanceof Error) {
+                    if (err.message.includes('network') || err.message.includes('fetch')) {
+                        toast('网络连接错误，请检查您的网络连接', 'error');
+                    } else if (err.message.includes('timeout')) {
+                        toast('请求超时，服务器可能繁忙', 'error');
+                    }
+                }
+            } finally {
+                setIsSaving(false);
             }
         },
         500
@@ -74,45 +103,74 @@ const useEditor = (initNote?: NoteModel) => {
 
     const onCreateLink = useCallback(
         async (title: string) => {
-            const result = await createNoteWithTitle(title);
+            try {
+                const result = await createNoteWithTitle(title);
 
-            if (!result) {
-                throw new Error('todo');
+                if (!result) {
+                    toast('创建链接失败', 'error');
+                    throw new Error('创建链接失败');
+                }
+
+                return `/${result.id}`;
+            } catch (err) {
+                console.error('创建链接时出错:', err);
+                toast('创建链接失败，请重试', 'error');
+                throw err;
             }
-
-            return `/${result.id}`;
         },
-        [createNoteWithTitle]
+        [createNoteWithTitle, toast]
     );
 
     const onClickLink = useCallback(
         (href: string) => {
-            if (isNoteLink(href.replace(location.origin, ''))) {
-                router.push(href, undefined, { shallow: true })
-                    .catch((v) => console.error('Error whilst pushing href to router: %O', v));
-            } else {
-                window.open(href, '_blank');
+            try {
+                if (isNoteLink(href.replace(location.origin, ''))) {
+                    router.push(href, undefined, { shallow: true })
+                        .catch((err) => {
+                            console.error('导航到链接时出错:', err);
+                            toast('导航失败，请重试', 'error');
+                        });
+                } else {
+                    window.open(href, '_blank');
+                }
+            } catch (err) {
+                console.error('处理链接点击时出错:', err);
+                toast('无法打开链接', 'error');
             }
         },
-        [router]
+        [router, toast]
     );
 
     const onUploadImage = useCallback(
         async (file: File, id?: string) => {
-            const data = new FormData();
-            data.append('file', file);
-            const result = await request<FormData, { url: string }>(
-                {
-                    method: 'POST',
-                    url: `/api/upload?id=${id}`,
-                },
-                data
-            );
-            if (!result) {
-                toast(error, 'error');
-                throw Error(error);
+            try {
+                const data = new FormData();
+                data.append('file', file);
+                
+                // 显示上传中提示
+                toast('正在上传图片...', 'info');
+                
+                const result = await request<FormData, { url: string }>(
+                    {
+                        method: 'POST',
+                        url: `/api/upload?id=${id}`,
+                    },
+                    data
+                );
+                
+                if (!result) {
+                    toast(error || '上传图片失败', 'error');
+                    throw Error(error || '上传图片失败');
+                }
+                
+                // 上传成功提示
+                toast('图片上传成功', 'success');
+                return result.url;
+            } catch (err) {
+                console.error('上传图片时出错:', err);
+                toast('上传图片失败，请重试', 'error');
+                throw err;
             }
-            return result.url;
         },
         [error, request, toast]
     );
@@ -121,27 +179,32 @@ const useEditor = (initNote?: NoteModel) => {
 
     const onHoverLink = useCallback(
         (event: MouseEvent | ReactMouseEvent) => {
-            if (!isBrowser || editorEl.current?.props.readOnly) {
-                return true;
-            }
-            const link = event.target as HTMLLinkElement;
-            const href = link.getAttribute('href');
-            if (link.classList.contains('bookmark')) {
-                return true;
-            }
-            if (href) {
-                if (isNoteLink(href)) {
-                    preview.close();
-                    preview.setData({ id: href.slice(1) });
-                    preview.setAnchor(link);
-                } else {
-                    linkToolbar.setData({ href, view: editorEl.current?.view });
-                    linkToolbar.setAnchor(link);
+            try {
+                if (!isBrowser || editorEl.current?.props.readOnly) {
+                    return true;
                 }
-            } else {
-                preview.setData({ id: undefined });
+                const link = event.target as HTMLLinkElement;
+                const href = link.getAttribute('href');
+                if (link.classList.contains('bookmark')) {
+                    return true;
+                }
+                if (href) {
+                    if (isNoteLink(href)) {
+                        preview.close();
+                        preview.setData({ id: href.slice(1) });
+                        preview.setAnchor(link);
+                    } else {
+                        linkToolbar.setData({ href, view: editorEl.current?.view });
+                        linkToolbar.setAnchor(link);
+                    }
+                } else {
+                    preview.setData({ id: undefined });
+                }
+                return true;
+            } catch (err) {
+                console.error('处理链接悬停时出错:', err);
+                return true; // 即使出错也返回true以允许默认行为
             }
-            return true;
         },
         [isBrowser, preview, linkToolbar]
     );
@@ -149,26 +212,42 @@ const useEditor = (initNote?: NoteModel) => {
     const [backlinks, setBackLinks] = useState<NoteCacheItem[]>();
 
     const getBackLinks = useCallback(async () => {
-        console.log(note?.id);
-        const linkNotes: NoteCacheItem[] = [];
-        if (!note?.id) return linkNotes;
-        setBackLinks([]);
-        await noteCache.iterate<NoteCacheItem, void>((value) => {
-            if (value.linkIds?.includes(note.id)) {
-                linkNotes.push(value);
+        try {
+            if (!note?.id) {
+                setBackLinks([]);
+                return;
             }
-        });
-        setBackLinks(linkNotes);
+            
+            setBackLinks([]);
+            const linkNotes: NoteCacheItem[] = [];
+            
+            await noteCache.iterate<NoteCacheItem, void>((value) => {
+                if (value.linkIds?.includes(note.id)) {
+                    linkNotes.push(value);
+                }
+            });
+            
+            setBackLinks(linkNotes);
+        } catch (err) {
+            console.error('获取反向链接时出错:', err);
+            // 即使出错也设置为空数组，避免UI显示问题
+            setBackLinks([]);
+        }
     }, [note?.id]);
 
     const onEditorChange = useCallback(
         (value: () => string): void => {
             try {
+                // 更新当前内容
+                const content = value();
+                setCurrentContent(content);
+                
                 // 只有在编辑模式下才更新内容
                 if (isEditing) {
-                    console.log('保存内容:', value().substring(0, 50) + '...');
+                    // 添加日志以便调试
+                    console.log('保存内容:', content.substring(0, 50) + '...');
                     
-                    onNoteChange.callback({ content: value() })
+                    onNoteChange.callback({ content })
                         .catch((err) => {
                             console.error('保存笔记时出错:', err);
                             toast('保存失败，请重试', 'error');
@@ -189,12 +268,10 @@ const useEditor = (initNote?: NoteModel) => {
         }
     }, [note?.content]);
 
-
+    // 检查是否为新建笔记，如果是则默认进入编辑模式
     useEffect(() => {
-        // 检查是否为新建笔记
         const isNew = has(router.query, 'new');
         if (isNew) {
-            // 如果是新建笔记，自动设置为编辑状态
             setIsEditing(true);
         }
     }, [router.query]);
@@ -215,22 +292,27 @@ const useEditor = (initNote?: NoteModel) => {
         };
     }, [isEditing, currentContent, note?.content]);
 
-    const saveNote = useCallback(
-        async () => {
-            if (currentContent) {
-                try {
-                    await onNoteChange.callback({ content: currentContent });
-                    toast('笔记已保存', 'success');
-                    setIsEditing(false);
-                } catch (error) {
-                    console.error('Error whilst updating note: %O', error);
-                    toast('保存失败，请重试', 'error');
-                }
-            }
-        },
-        [currentContent, onNoteChange, toast]
-    );
+    // 添加手动保存方法
+    const saveNote = useCallback(async () => {
+        if (!currentContent) return;
+        
+        try {
+            setIsSaving(true);
+            toast('正在保存...', 'info');
+            
+            await onNoteChange.callback({ content: currentContent });
+            
+            toast('笔记已保存', 'success');
+            setIsEditing(false);
+        } catch (err) {
+            console.error('手动保存笔记时出错:', err);
+            toast('保存失败，请重试', 'error');
+        } finally {
+            setIsSaving(false);
+        }
+    }, [currentContent, onNoteChange, toast]);
 
+    // 切换编辑模式的方法
     const toggleEditMode = useCallback(() => {
         setIsEditing((prev) => !prev);
     }, []);
@@ -251,12 +333,15 @@ const useEditor = (initNote?: NoteModel) => {
         toggleEditMode,
         isEditing,
         setIsEditing,
-        currentContent    
+        currentContent,
+        isSaving
     };
 };
 
+// 使用原始方式创建容器，不显式指定类型参数
 const EditorState = createContainer(useEditor);
 
+// 为了解决TypeScript类型错误，扩展EditorState的类型
 declare module 'unstated-next' {
     interface ContainerType<State, Initializers extends unknown[]> {
         Provider: React.FC<{
