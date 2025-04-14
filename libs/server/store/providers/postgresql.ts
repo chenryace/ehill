@@ -37,26 +37,41 @@ export class StorePostgreSQL extends StoreProvider {
      * 初始化数据库模式
      */
     private async initSchema() {
-        const fs = require('fs');
-        const path = require('path');
-        const schemaPath = path.join(__dirname, 'postgresql', 'schema.sql');
-        const schema = fs.readFileSync(schemaPath, 'utf8');
-        
-        const client = await this.pool.connect();
         try {
+          const fs = require('fs');
+          const path = require('path');
+          const schemaPath = path.join(__dirname, 'postgresql', 'schema.sql');
+          
+          // 检查文件是否存在
+          if (!fs.existsSync(schemaPath)) {
+            this.logger.warn('数据库模式文件不存在:', schemaPath);
+            return;
+          }
+          
+          const schema = fs.readFileSync(schemaPath, 'utf8');
+          
+          const client = await this.pool.connect();
+          try {
             await client.query(schema);
             this.logger.info('数据库模式初始化成功');
-        } catch (err) {
-            this.logger.error(err, '数据库模式初始化失败');
-            throw err;
-        } finally {
+          } catch (err) {
+            // 检查是否是表已存在的错误，如果是则忽略
+            if (err.message && err.message.includes('already exists')) {
+              this.logger.info('数据库模式已存在，跳过初始化');
+            } else {
+              this.logger.error(err, '数据库模式初始化失败');
+              // 不抛出错误，让应用继续运行
+            }
+          } finally {
             client.release();
+          }
+        } catch (err) {
+          this.logger.error(err, '初始化数据库模式过程中发生错误');
+          // 不抛出错误，让应用继续运行
         }
+      }
     }
 
-    /**
-     * 获取签名URL（PostgreSQL实现不需要签名URL，返回空字符串）
-     */
 async getSignUrl(_path: string, _expires = 600): Promise<string> {
     // PostgreSQL不需要签名URL，返回空字符串
     return '';

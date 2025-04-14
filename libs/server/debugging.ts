@@ -100,4 +100,9 @@ export function createLogger(name: string): Logger {
     }, multistream);
 }
 
+const isVercel = process.env.VERCEL === '1';
+const dir = isVercel 
+    ? path.resolve('/tmp/logs') 
+    : path.resolve(process.cwd(), process.env.LOG_DIRECTORY ?? 'logs');
+    
 export type { Logger };

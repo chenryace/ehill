@@ -163,15 +163,20 @@ const useEditor = (initNote?: NoteModel) => {
 
     const onEditorChange = useCallback(
         (value: () => string): void => {
-        // 只有在编辑模式下才更新内容
-            if (isEditing) {
-                console.log('保存内容:', value().substring(0, 50) + '...'); // 添加日志以便调试
-                onNoteChange.callback({ content: value() })
-                    .then(() => console.log('内容保存成功'))
-                    .catch((v) => {
-                        console.error('保存笔记时出错:', v);
-                        toast('保存失败，请重试', 'error'); // 添加错误提示
-                    });
+            try {
+                // 只有在编辑模式下才更新内容
+                if (isEditing) {
+                    console.log('保存内容:', value().substring(0, 50) + '...');
+                    
+                    onNoteChange.callback({ content: value() })
+                        .catch((err) => {
+                            console.error('保存笔记时出错:', err);
+                            toast('保存失败，请重试', 'error');
+                        });
+                }
+            } catch (err) {
+                console.error('处理编辑器内容变更时出错:', err);
+                toast('处理内容变更失败', 'error');
             }
         },
         [onNoteChange, isEditing, toast]
