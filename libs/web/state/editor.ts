@@ -238,27 +238,18 @@ const useEditor = (initNote?: NoteModel) => {
     const onEditorChange = useCallback(
         (value: () => string): void => {
             try {
-                // 更新当前内容
+                // 更新当前内容，但不自动保存
                 const content = value();
                 setCurrentContent(content);
                 
-                // 只有在编辑模式下才更新内容
-                if (isEditing) {
-                    // 添加日志以便调试
-                    console.log('保存内容:', content.substring(0, 50) + '...');
-                    
-                    onNoteChange.callback({ content })
-                        .catch((err) => {
-                            console.error('保存笔记时出错:', err);
-                            toast('保存失败，请重试', 'error');
-                        });
-                }
+                // 移除自动保存逻辑，只更新内容
+                console.log('内容已更新，但未自动保存');
             } catch (err) {
                 console.error('处理编辑器内容变更时出错:', err);
                 toast('处理内容变更失败', 'error');
             }
         },
-        [onNoteChange, isEditing, toast]
+        [toast]
     );
 
     // 添加初始内容加载
@@ -298,10 +289,10 @@ const useEditor = (initNote?: NoteModel) => {
         
         try {
             setIsSaving(true);
-            toast('正在保存...', 'info');
             
             await onNoteChange.callback({ content: currentContent });
             
+            // 保存成功后显示通知并退出编辑模式
             toast('笔记已保存', 'success');
             setIsEditing(false);
         } catch (err) {
