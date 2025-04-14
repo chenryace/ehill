@@ -1,8 +1,8 @@
-import { FC } from 'react';
+import { FC, memo } from 'react';
 import EditorState from 'libs/web/state/editor';
 
-const SaveButton: FC = () => {
-    const { isEditing, toggleEditMode } = EditorState.useContainer();
+const SaveButton: FC = memo(() => {
+    const { isEditing, toggleEditMode, isSaving } = EditorState.useContainer();
 
     return (
         <div className="toggle-switch-container">
@@ -11,8 +11,9 @@ const SaveButton: FC = () => {
                 className="toggle-switch"
                 title={isEditing ? "保存" : "编辑"}
                 aria-label={isEditing ? "保存" : "编辑"}
+                disabled={isSaving}
             >
-                <div className={`toggle-switch-slider ${isEditing ? 'active' : ''}`}>
+                <div className={`toggle-switch-slider ${isEditing ? 'active' : ''} ${isSaving ? 'saving' : ''}`}>
                     <div className="toggle-switch-button"></div>
                     <div className="toggle-switch-labels">
                         <span className="toggle-switch-label-off">OFF</span>
@@ -37,6 +38,11 @@ const SaveButton: FC = () => {
                     border: none;
                     cursor: pointer;
                     overflow: hidden;
+                }
+                
+                .toggle-switch:disabled {
+                    cursor: not-allowed;
+                    opacity: 0.7;
                 }
                 
                 .toggle-switch-slider {
@@ -68,6 +74,10 @@ const SaveButton: FC = () => {
                     background-color: #2ecc71;
                 }
                 
+                .toggle-switch-slider.saving::before {
+                    background-color: #3498db;
+                }
+                
                 .toggle-switch-button {
                     position: absolute;
                     top: 4px;
@@ -82,6 +92,16 @@ const SaveButton: FC = () => {
                 
                 .toggle-switch-slider.active .toggle-switch-button {
                     left: calc(100% - 34px);
+                }
+                
+                .toggle-switch-slider.saving .toggle-switch-button {
+                    animation: pulse 1.5s infinite;
+                }
+                
+                @keyframes pulse {
+                    0% { transform: scale(1); }
+                    50% { transform: scale(0.9); }
+                    100% { transform: scale(1); }
                 }
                 
                 .toggle-switch-labels {
@@ -111,6 +131,8 @@ const SaveButton: FC = () => {
             `}</style>
         </div>
     );
-};
+});
+
+SaveButton.displayName = 'SaveButton';
 
 export default SaveButton;
