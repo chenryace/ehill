@@ -1,9 +1,9 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import React from 'react';
 
 interface ErrorBoundaryProps {
-  children: ReactNode;
-  fallback?: ReactNode;
-  onError?: (error: Error, errorInfo: ErrorInfo) => void;
+  children: React.ReactNode;
+  fallback: React.ReactNode;
+  onError?: (error: Error) => void;
 }
 
 interface ErrorBoundaryState {
@@ -12,76 +12,37 @@ interface ErrorBoundaryState {
 }
 
 /**
- * 错误边界组件，用于捕获子组件树中的 JavaScript 错误
- * 防止整个应用崩溃，并提供优雅的降级UI
+ * 增强版错误边界组件
+ * 捕获子组件中的JavaScript错误，并显示备用UI
  */
-class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
-    this.state = {
-      hasError: false,
-      error: null
-    };
+    this.state = { hasError: false, error: null };
   }
 
   static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    // 更新 state 使下一次渲染显示降级 UI
+    // 更新状态，下次渲染时显示备用UI
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo): void {
     // 记录错误信息
-    console.error('ErrorBoundary 捕获到错误:', error, errorInfo);
+    console.error('ErrorBoundary捕获到错误:', error, errorInfo);
     
-    // 调用可选的错误处理回调
+    // 调用错误处理回调
     if (this.props.onError) {
-      this.props.onError(error, errorInfo);
+      this.props.onError(error);
     }
+    
+    // 可以在这里添加错误上报逻辑
+    // reportError(error, errorInfo);
   }
 
-  render(): ReactNode {
+  render(): React.ReactNode {
     if (this.state.hasError) {
-      // 如果提供了自定义降级UI，则使用它
-      if (this.props.fallback) {
-        return this.props.fallback;
-      }
-      
-      // 默认降级UI
-      return (
-        <div className="error-boundary-fallback">
-          <h2>页面加载出错</h2>
-          <p>抱歉，加载内容时出现了问题。</p>
-          <button 
-            onClick={() => this.setState({ hasError: false, error: null })}
-            className="error-reset-button"
-          >
-            重试
-          </button>
-          <style jsx>{`
-            .error-boundary-fallback {
-              padding: 20px;
-              margin: 20px 0;
-              border: 1px solid #f5c6cb;
-              border-radius: 4px;
-              color: #721c24;
-              background-color: #f8d7da;
-              text-align: center;
-            }
-            .error-reset-button {
-              margin-top: 10px;
-              padding: 8px 16px;
-              background-color: #dc3545;
-              color: white;
-              border: none;
-              border-radius: 4px;
-              cursor: pointer;
-            }
-            .error-reset-button:hover {
-              background-color: #c82333;
-            }
-          `}</style>
-        </div>
-      );
+      // 显示备用UI
+      return this.props.fallback;
     }
 
     return this.props.children;
