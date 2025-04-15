@@ -77,7 +77,7 @@ const Editor: FC<EditorProps> = memo(({ readOnly: propReadOnly, isPreview }) => 
         toggleEditMode?.();
     }, {}, [toggleEditMode]);
 
-    // 修改这个useEffect，添加滚动检测逻辑
+    // 更新hasMinHeight状态
     useEffect(() => {
         if (isPreview) return;
         
@@ -121,9 +121,6 @@ const Editor: FC<EditorProps> = memo(({ readOnly: propReadOnly, isPreview }) => 
             onEditorChange(value);
         }
     }, [onEditorChange]);
-    
-    // 添加显示名称以便于调试
-    Editor.displayName = 'Editor';
     
     return (
         <>
@@ -253,5 +250,8 @@ const Editor: FC<EditorProps> = memo(({ readOnly: propReadOnly, isPreview }) => 
         </>
     );
 });
+
+// 添加显示名称以便于调试
+Editor.displayName = 'Editor';
 
 export default Editor;
