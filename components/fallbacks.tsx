@@ -1,5 +1,5 @@
 import React from 'react';
-import  NoteModel  from 'libs/shared/note';
+import NoteModel from 'libs/shared/note';
 
 interface FallbackProps {
   error?: Error;
