@@ -2,15 +2,20 @@ import { FC, memo } from 'react';
 import EditorState from 'libs/web/state/editor';
 
 const SaveButton: FC = memo(() => {
-    const { isEditing, toggleEditMode, saveNote, isSaving } = EditorState.useContainer();
+    const { 
+        isEditing, 
+        enterEditMode, 
+        saveAndExitEditMode, 
+        isSaving 
+    } = EditorState.useContainer();
 
     const handleClick = () => {
         if (isEditing) {
-            // 在编辑模式下，点击按钮保存笔记
-            saveNote();
+            // 在编辑模式下，点击按钮保存笔记并退出编辑模式
+            saveAndExitEditMode();
         } else {
             // 在预览模式下，点击按钮进入编辑模式
-            toggleEditMode();
+            enterEditMode();
         }
     };
 
