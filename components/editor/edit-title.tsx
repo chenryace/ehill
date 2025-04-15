@@ -10,7 +10,7 @@ import {
     useMemo,
     ChangeEvent,
 } from 'react';
-import EditorState from 'libs/web/state/editor';
+import { EditorState } from 'libs/web/state/editor';
 
 const EditTitle: FC<{ readOnly?: boolean }> = ({ readOnly }) => {
     const { editorEl, onNoteChange, note } = EditorState.useContainer();
