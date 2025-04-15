@@ -1,4 +1,4 @@
-import { FC, useEffect, useState, useCallback, memo } from 'react';
+import { FC, useEffect, useState, useCallback, memo, useRef } from 'react';
 import { use100vh } from 'react-div-100vh';
 import MarkdownEditor, { Props } from '@notea/rich-markdown-editor';
 import { useEditorTheme } from './theme';
@@ -49,6 +49,10 @@ const Editor: FC<EditorProps> = memo(({ readOnly: propReadOnly, isPreview }) => 
     // 添加编辑状态指示器
     const [showEditingIndicator, setShowEditingIndicator] = useState(false);
     
+    // 防止滚动触发编辑模式的标志
+    const isScrollingRef = useRef(false);
+    const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    
     // 显示编辑状态指示器
     useEffect(() => {
         if (isEditing) {
@@ -73,14 +77,49 @@ const Editor: FC<EditorProps> = memo(({ readOnly: propReadOnly, isPreview }) => 
         toggleEditMode?.();
     }, {}, [toggleEditMode]);
 
+    // 修改这个useEffect，添加滚动检测逻辑
     useEffect(() => {
         if (isPreview) return;
-        setHasMinHeight((backlinks?.length ?? 0) <= 0);
+        
+        // 只在非滚动状态下更新hasMinHeight
+        if (!isScrollingRef.current) {
+            setHasMinHeight((backlinks?.length ?? 0) <= 0);
+        }
     }, [backlinks, isPreview]);
+    
+    // 添加滚动事件监听
+    useEffect(() => {
+        const handleScroll = () => {
+            // 设置滚动标志
+            isScrollingRef.current = true;
+            
+            // 清除之前的定时器
+            if (scrollTimeoutRef.current) {
+                clearTimeout(scrollTimeoutRef.current);
+            }
+            
+            // 设置新的定时器，滚动结束后重置标志
+            scrollTimeoutRef.current = setTimeout(() => {
+                isScrollingRef.current = false;
+            }, 150); // 滚动结束后150ms重置标志
+        };
+        
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+            if (scrollTimeoutRef.current) {
+                clearTimeout(scrollTimeoutRef.current);
+            }
+        };
+    }, []);
 
     // 使用useCallback优化事件处理函数
     const handleEditorChange = useCallback((value: () => string) => {
-        onEditorChange(value);
+        // 只在非滚动状态下处理编辑器内容变更
+        if (!isScrollingRef.current) {
+            onEditorChange(value);
+        }
     }, [onEditorChange]);
     
     // 添加显示名称以便于调试
