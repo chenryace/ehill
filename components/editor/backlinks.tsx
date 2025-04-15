@@ -1,6 +1,6 @@
 import IconButton from 'components/icon-button';
 import useI18n from 'libs/web/hooks/use-i18n';
-import { EditorState } from 'libs/web/state/editor';
+import EditorState from 'libs/web/state/editor';
 import Link from 'next/link';
 import React, { FC, useEffect } from 'react';
 
