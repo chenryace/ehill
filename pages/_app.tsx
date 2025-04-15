@@ -25,9 +25,10 @@ const handleRejection = (event: any) => {
         // todo catch
         event.stopImmediatePropagation();
     }
-    if (event.reason === 'canceled') {
-        event.preventDefault();
-    }
+    // 移除对canceled事件的preventDefault调用，允许路由取消事件正常传播
+    // if (event.reason === 'canceled') {
+    //     event.preventDefault();
+    // }
 };
 
 if (typeof window !== 'undefined') {
