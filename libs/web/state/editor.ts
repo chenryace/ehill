@@ -22,7 +22,7 @@ import { ROOT_ID } from 'libs/shared/tree';
 import { has } from 'lodash';
 import UIState from './ui';
 
-// 声明全局Window接口扩展，与route-error-handler.tsx中保持一致
+// 声明全局Window接口扩展
 declare global {
     interface Window {
         __EDIT_MODE_TOGGLE__?: boolean;
@@ -66,6 +66,10 @@ const useEditor = (initNote?: NoteModel) => {
     const [currentContent, setCurrentContent] = useState<string>('');
     // 添加保存状态
     const [isSaving, setIsSaving] = useState(false);
+    // 添加当前笔记ID引用，用于跟踪笔记变化
+    const currentNoteIdRef = useRef<string | undefined>(note?.id);
+    // 添加内容已修改标志
+    const [contentModified, setContentModified] = useState(false);
 
     const onNoteChange = useDebouncedCallback(
         async (data: Partial<NoteModel>) => {
@@ -89,6 +93,9 @@ const useEditor = (initNote?: NoteModel) => {
                     // 成功更新笔记后显示提示
                     toast('笔记保存成功', 'success');
                 }
+                
+                // 重置内容修改标志
+                setContentModified(false);
             } catch (err) {
                 console.error('保存笔记时出错:', err);
                 toast('保存失败，请重试', 'error');
@@ -132,6 +139,17 @@ const useEditor = (initNote?: NoteModel) => {
         (href: string) => {
             try {
                 if (isNoteLink(href.replace(location.origin, ''))) {
+                    // 如果当前有未保存的更改，提示用户
+                    if (isEditing && contentModified) {
+                        const confirmLeave = window.confirm('您有未保存的更改，确定要离开吗？');
+                        if (!confirmLeave) {
+                            return;
+                        }
+                        // 用户确认离开，重置编辑状态
+                        setIsEditing(false);
+                        setContentModified(false);
+                    }
+                    
                     router.push(href, undefined, { shallow: true })
                         .catch((err) => {
                             console.error('导航到链接时出错:', err);
@@ -145,7 +163,7 @@ const useEditor = (initNote?: NoteModel) => {
                 toast('无法打开链接', 'error');
             }
         },
-        [router, toast]
+        [router, toast, isEditing, contentModified]
     );
 
     const onUploadImage = useCallback(
@@ -249,6 +267,13 @@ const useEditor = (initNote?: NoteModel) => {
                 const content = value();
                 setCurrentContent(content);
                 
+                // 检查内容是否已修改
+                if (content !== note?.content) {
+                    setContentModified(true);
+                } else {
+                    setContentModified(false);
+                }
+                
                 // 移除自动保存逻辑，只更新内容
                 console.log('内容已更新，但未自动保存');
             } catch (err) {
@@ -256,18 +281,30 @@ const useEditor = (initNote?: NoteModel) => {
                 toast('处理内容变更失败', 'error');
             }
         },
-        [toast]
+        [note?.content, toast]
     );
 
     // 添加初始内容加载
     useEffect(() => {
         if (note?.content) {
             setCurrentContent(note.content);
+            // 重置内容修改标志
+            setContentModified(false);
         }
     }, [note?.content]);
 
+    // 检查笔记ID是否变化，如果变化则退出编辑模式
+    useEffect(() => {
+        if (note?.id !== currentNoteIdRef.current) {
+            // 笔记ID变化，退出编辑模式
+            setIsEditing(false);
+            setContentModified(false);
+            // 更新当前笔记ID引用
+            currentNoteIdRef.current = note?.id;
+        }
+    }, [note?.id]);
+
     // 检查是否为新建笔记，如果是则默认进入编辑模式
-    // 同时添加路由变化时的状态重置逻辑
     useEffect(() => {
         // 创建一个标志，表示组件是否已卸载
         let isMounted = true;
@@ -279,64 +316,24 @@ const useEditor = (initNote?: NoteModel) => {
             if (isMounted) {
                 if (isNew) {
                     setIsEditing(true);
-                } else {
-                    // 非新建笔记时，确保编辑状态为false（预览模式）
-                    // 这可以防止在路由变化时意外进入编辑模式
-                    setIsEditing(false);
                 }
+                // 移除自动退出编辑模式的逻辑，让编辑模式只针对当前笔记
             }
         } catch (err) {
             console.error('处理路由变化时出错:', err);
             // 出错时不改变编辑状态，保持当前状态
         }
         
-        // 添加路由变化事件监听
-        const handleRouteChangeStart = () => {
-            // 路由开始变化时，记录当前状态但不立即改变
-            console.log('路由开始变化，当前编辑状态:', isEditing);
-        };
-        
-        const handleRouteChangeComplete = () => {
-            // 路由变化完成后，如果不是新建笔记，确保是预览模式
-            if (isMounted && !has(router.query, 'new')) {
-                setIsEditing(false);
-            }
-        };
-        
-        const handleRouteChangeError = (err: Error) => {
-            // 路由变化出错时，记录错误但不改变编辑状态
-            console.error('路由变化出错:', err);
-            // 特别处理"Loading initial props cancelled"错误和"Route Cancelled"错误
-            if (err.message.includes('Loading initial props cancelled') || 
-                err.message.includes('Route Cancelled')) {
-                // 将错误级别从error降为warn，避免在控制台显示为错误
-                console.warn('检测到路由取消错误，保持当前编辑状态不变');
-                // 阻止错误继续传播
-                return true;
-            }
-        };
-        
-        if (router.events) {
-            router.events.on('routeChangeStart', handleRouteChangeStart);
-            router.events.on('routeChangeComplete', handleRouteChangeComplete);
-            router.events.on('routeChangeError', handleRouteChangeError);
-        }
-        
         return () => {
-            // 组件卸载时，更新标志并移除事件监听
+            // 组件卸载时，更新标志
             isMounted = false;
-            if (router.events) {
-                router.events.off('routeChangeStart', handleRouteChangeStart);
-                router.events.off('routeChangeComplete', handleRouteChangeComplete);
-                router.events.off('routeChangeError', handleRouteChangeError);
-            }
         };
-    }, [router.query, isEditing]);
+    }, [router.query]);
     
     // 添加未保存内容提示
     useEffect(() => {
         const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-            if (isEditing && currentContent !== note?.content) {
+            if (isEditing && contentModified) {
                 const message = '您有未保存的更改，确定要离开吗？';
                 e.returnValue = message;
                 return message;
@@ -347,7 +344,35 @@ const useEditor = (initNote?: NoteModel) => {
         return () => {
             window.removeEventListener('beforeunload', handleBeforeUnload);
         };
-    }, [isEditing, currentContent, note?.content]);
+    }, [isEditing, contentModified]);
+
+    // 添加路由变化监听，处理笔记切换
+    useEffect(() => {
+        const handleRouteChangeStart = (url: string) => {
+            // 如果当前有未保存的更改，提示用户
+            if (isEditing && contentModified) {
+                const confirmLeave = window.confirm('您有未保存的更改，确定要离开吗？');
+                if (!confirmLeave) {
+                    // 用户取消离开，阻止路由变化
+                    router.events.emit('routeChangeError');
+                    throw new Error('路由变化已取消');
+                }
+                // 用户确认离开，重置编辑状态
+                setIsEditing(false);
+                setContentModified(false);
+            }
+        };
+        
+        if (router.events) {
+            router.events.on('routeChangeStart', handleRouteChangeStart);
+        }
+        
+        return () => {
+            if (router.events) {
+                router.events.off('routeChangeStart', handleRouteChangeStart);
+            }
+        };
+    }, [router.events, isEditing, contentModified]);
 
     // 添加手动保存方法
     const saveNote = useCallback(async () => {
@@ -356,52 +381,44 @@ const useEditor = (initNote?: NoteModel) => {
         try {
             setIsSaving(true);
             
-            // 设置编辑模式切换标记，防止路由错误处理器拦截
-            window.__EDIT_MODE_TOGGLE__ = true;
-            
             await onNoteChange.callback({ content: currentContent });
             
             // 保存成功后显示通知并退出编辑模式
             toast('笔记已保存', 'success');
             setIsEditing(false);
+            setContentModified(false);
         } catch (err) {
             console.error('手动保存笔记时出错:', err);
             toast('保存失败，请重试', 'error');
         } finally {
             setIsSaving(false);
-            
-            // 确保清除编辑模式切换标记
-            setTimeout(() => {
-                window.__EDIT_MODE_TOGGLE__ = false;
-            }, 100);
         }
     }, [currentContent, onNoteChange, toast]);
 
     // 切换编辑模式的方法
     const toggleEditMode = useCallback(() => {
         try {
-            // 设置编辑模式切换标记，防止路由错误处理器拦截
-            window.__EDIT_MODE_TOGGLE__ = true;
-            console.log('设置编辑模式切换标记');
+            console.log('切换编辑模式');
             
             // 切换编辑状态
             setIsEditing((prev) => !prev);
             
             // 如果从编辑模式切换到预览模式，且内容有变化，提示保存
-            if (isEditing && currentContent !== note?.content) {
-                toast('您有未保存的更改', 'warning');
+            if (isEditing && contentModified) {
+                const confirmExit = window.confirm('您有未保存的更改，确定要退出编辑模式吗？');
+                if (!confirmExit) {
+                    // 用户取消退出，保持编辑模式
+                    setIsEditing(true);
+                    return;
+                }
+                // 用户确认退出，重置内容修改标志
+                setContentModified(false);
             }
         } catch (err) {
             console.error('切换编辑模式时出错:', err);
             toast('切换编辑模式失败', 'error');
-        } finally {
-            // 确保清除编辑模式切换标记
-            setTimeout(() => {
-                window.__EDIT_MODE_TOGGLE__ = false;
-                console.log('清除编辑模式切换标记');
-            }, 100);
         }
-    }, [isEditing, currentContent, note?.content, toast]);
+    }, [isEditing, contentModified, toast]);
 
     return {
         onCreateLink,
@@ -420,7 +437,8 @@ const useEditor = (initNote?: NoteModel) => {
         isEditing,
         setIsEditing,
         currentContent,
-        isSaving
+        isSaving,
+        contentModified
     };
 };
 
