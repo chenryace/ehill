@@ -6,8 +6,22 @@ import EditorState from 'libs/web/state/editor';
 import UIState from 'libs/web/state/ui';
 import EditTitle from './edit-title';
 import SaveButton from './save-button';
-import { EditorProps } from './editor';
 import ErrorBoundary from '../error-boundary';
+import MarkdownEditor from '@notea/rich-markdown-editor';
+
+// 定义编辑器属性接口，不再从editor.tsx导入
+interface EditorProps {
+  onChange?: (value: () => string) => void;
+  onCreateLink?: (title: string) => Promise<string>;
+  onSearchLink?: (keyword: string) => Promise<any[]>;
+  onClickLink?: (href: string) => void;
+  onUploadImage?: (file: File, id?: string) => Promise<string>;
+  onHoverLink?: (event: MouseEvent) => boolean;
+  readOnly?: boolean;
+  defaultValue?: string;
+  autoFocus?: boolean;
+  ref?: React.RefObject<MarkdownEditor>;
+}
 
 // 使用动态导入和React.memo优化性能
 const Editor = dynamic(() => import('./editor'), { ssr: false });
@@ -104,4 +118,6 @@ const MainEditor: FC<
 // 添加显示名称以便于调试
 MainEditor.displayName = 'MainEditor';
 
+// 导出EditorProps接口以供其他组件使用
+export type { EditorProps };
 export default MainEditor;
