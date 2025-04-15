@@ -8,6 +8,7 @@ import {
     useEffect, 
 } from 'react';
 import useFetcher from 'libs/web/api/fetcher';
+// @ts-ignore - 保留此导入以维持与 editor.ts 的功能联动
 import { NOTE_DELETED } from 'libs/shared/meta';
 import { isNoteLink, NoteModel } from 'libs/shared/note';
 import { useToast } from 'libs/web/hooks/use-toast';
