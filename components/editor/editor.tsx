@@ -42,7 +42,7 @@ const Editor: FC = memo(() => {
   useEffect(() => {
     // 创建一个MutationObserver来监视DOM变化
     // 这可以帮助检测由于路由错误导致的意外DOM重新渲染
-    const observer = new MutationObserver((mutations) => {
+    const observer = new MutationObserver((_) => {
       // 如果检测到可能导致状态不一致的DOM变化，记录但不干预
       console.log('检测到DOM变化，但不会影响编辑状态');
     });
