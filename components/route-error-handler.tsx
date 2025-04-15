@@ -8,6 +8,13 @@ interface RouterError extends Error {
   message: string;
 }
 
+// 扩展Window接口以添加编辑模式切换标记
+declare global {
+  interface Window {
+    __EDIT_MODE_TOGGLE__?: boolean;
+  }
+}
+
 /**
  * 全局路由错误处理组件
  * 用于捕获和处理Next.js路由相关的错误，防止它们在控制台中显示为错误
@@ -18,6 +25,12 @@ const RouteErrorHandler = () => {
   useEffect(() => {
     // 路由错误处理函数
     const handleRouteError = (error: RouterError) => {
+      // 检查是否为编辑模式切换事件
+      if (window.__EDIT_MODE_TOGGLE__) {
+        console.log('检测到编辑模式切换事件，允许事件传播');
+        return false;
+      }
+      
       // 检查是否为路由取消错误
       if (
         error.message?.includes('Route Cancelled') ||
@@ -47,6 +60,12 @@ const RouteErrorHandler = () => {
     // 全局错误处理
     const originalErrorHandler = window.onerror;
     window.onerror = function(message: string | Event, source?: string, lineno?: number, colno?: number, error?: Error): boolean {
+      // 检查是否为编辑模式切换事件
+      if (window.__EDIT_MODE_TOGGLE__) {
+        console.log('捕获到编辑模式切换相关错误，允许事件传播');
+        return false;
+      }
+      
       // 检查是否为路由取消错误
       if (
         typeof message === 'string' && (
@@ -72,6 +91,12 @@ const RouteErrorHandler = () => {
     // 全局Promise错误处理
     const originalUnhandledRejection = window.onunhandledrejection;
     window.onunhandledrejection = function(event: PromiseRejectionEvent): boolean {
+      // 检查是否为编辑模式切换事件
+      if (window.__EDIT_MODE_TOGGLE__) {
+        console.log('捕获到编辑模式切换相关Promise错误，允许事件传播');
+        return false;
+      }
+      
       const error = event.reason as RouterError;
       // 检查是否为路由取消错误
       if (
