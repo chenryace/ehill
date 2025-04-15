@@ -19,7 +19,7 @@ import MarkdownEditor from '@notea/rich-markdown-editor';
 import { useDebouncedCallback } from 'use-debounce';
 import { ROOT_ID } from 'libs/shared/tree';
 import { has } from 'lodash';
-import UIState from './ui';
+import UIState from 'libs/web/state/ui';
 
 // 声明全局Window接口扩展，仅用于调试目的
 declare global {
@@ -495,5 +495,5 @@ const useEditor = (initNote?: NoteModel) => {
         } catch (err) {
             console.error('取消编辑时出错:', err);
             toast('操作失败', 'e
-(Content truncated due to size limit. Use line r
+(Content truncated due to size limi
 (Content truncated due to size limit. Use line ranges to read in chunks)
