@@ -28,20 +28,6 @@ declare global {
     }
 }
 
-const onSearchLink = async (keyword: string) => {
-    const list = await searchNote(keyword, NOTE_DELETED.NORMAL);
-
-    return list.map((item) => ({
-        title: item.title,
-        subtitle: searchRangeText({
-            text: item.rawContent || '',
-            keyword,
-            maxLen: 40,
-        }).match,
-        url: `/${item.id}`,
-    }));
-};
-
 const useEditor = (initNote?: NoteModel) => {
     const {
         createNoteWithTitle,
