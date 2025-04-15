@@ -26,6 +26,7 @@ import UIState from './ui';
 declare global {
     interface Window {
         __EDIT_MODE_TOGGLE__?: boolean;
+        __LAST_EDITED_NOTE_ID__?: string; // 添加上次编辑的笔记ID
     }
 }
 
@@ -70,6 +71,8 @@ const useEditor = (initNote?: NoteModel) => {
     const currentNoteIdRef = useRef<string | undefined>(note?.id);
     // 添加内容已修改标志
     const [contentModified, setContentModified] = useState(false);
+    // 添加防止滚动触发编辑模式的标志
+    const preventScrollEditRef = useRef(false);
 
     const onNoteChange = useDebouncedCallback(
         async (data: Partial<NoteModel>) => {
@@ -263,6 +266,11 @@ const useEditor = (initNote?: NoteModel) => {
     const onEditorChange = useCallback(
         (value: () => string): void => {
             try {
+                // 防止滚动触发的状态更新
+                if (preventScrollEditRef.current) {
+                    return;
+                }
+                
                 // 更新当前内容，但不自动保存
                 const content = value();
                 setCurrentContent(content);
@@ -296,9 +304,18 @@ const useEditor = (initNote?: NoteModel) => {
     // 检查笔记ID是否变化，如果变化则退出编辑模式
     useEffect(() => {
         if (note?.id !== currentNoteIdRef.current) {
+            console.log('笔记ID变化，退出编辑模式', currentNoteIdRef.current, '->', note?.id);
+            
             // 笔记ID变化，退出编辑模式
             setIsEditing(false);
             setContentModified(false);
+            
+            // 设置防滚动标志，防止滚动触发编辑模式
+            preventScrollEditRef.current = true;
+            setTimeout(() => {
+                preventScrollEditRef.current = false;
+            }, 500);
+            
             // 更新当前笔记ID引用
             currentNoteIdRef.current = note?.id;
         }
@@ -374,6 +391,30 @@ const useEditor = (initNote?: NoteModel) => {
         };
     }, [router.events, isEditing, contentModified, router]);
 
+    // 添加滚动事件监听，防止滚动触发编辑模式
+    useEffect(() => {
+        const handleScroll = () => {
+            // 设置防滚动标志
+            preventScrollEditRef.current = true;
+            
+            // 清除之前的定时器
+            clearTimeout(window.scrollTimer);
+            
+            // 设置新的定时器，滚动结束后重置标志
+            window.scrollTimer = setTimeout(() => {
+                preventScrollEditRef.current = false;
+            }, 300); // 滚动结束后300ms重置标志
+        };
+        
+        // 添加滚动事件监听
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        
+        return () => {
+            window.removeEventListener('scroll', handleScroll);
+            clearTimeout(window.scrollTimer);
+        };
+    }, []);
+
     // 添加手动保存方法
     const saveNote = useCallback(async () => {
         if (!currentContent) return;
@@ -382,6 +423,11 @@ const useEditor = (initNote?: NoteModel) => {
             setIsSaving(true);
             
             await onNoteChange.callback({ content: currentContent });
+            
+            // 记录最后编辑的笔记ID
+            if (note?.id) {
+                window.__LAST_EDITED_NOTE_ID__ = note.id;
+            }
             
             // 保存成功后显示通知并退出编辑模式
             toast('笔记已保存', 'success');
@@ -393,12 +439,18 @@ const useEditor = (initNote?: NoteModel) => {
         } finally {
             setIsSaving(false);
         }
-    }, [currentContent, onNoteChange, toast]);
+    }, [currentContent, onNoteChange, toast, note?.id]);
 
     // 切换编辑模式的方法
     const toggleEditMode = useCallback(() => {
         try {
             console.log('切换编辑模式');
+            
+            // 防止滚动触发的状态更新
+            if (preventScrollEditRef.current) {
+                console.log('滚动中，忽略编辑模式切换');
+                return;
+            }
             
             // 切换编辑状态
             setIsEditing((prev) => !prev);
@@ -441,6 +493,13 @@ const useEditor = (initNote?: NoteModel) => {
         contentModified
     };
 };
+
+// 添加全局滚动定时器类型
+declare global {
+    interface Window {
+        scrollTimer: NodeJS.Timeout;
+    }
+}
 
 // 使用原始方式创建容器，不显式指定类型参数
 const EditorState = createContainer(useEditor);
