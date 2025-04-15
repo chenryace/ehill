@@ -292,10 +292,16 @@ const useEditor = (initNote?: NoteModel) => {
     }, [note?.id]);
 
     const onEditorChange = useCallback(
-        (value: () => string): void => {
+        (value: () => string, readOnly?: boolean): void => {
             try {
                 // 防止滚动触发的状态更新
                 if (preventScrollEditRef.current) {
+                    return;
+                }
+                
+                // 检查是否为只读模式，如果是则不允许编辑
+                if (readOnly) {
+                    console.log('编辑器处于只读模式，忽略内容变更');
                     return;
                 }
                 
@@ -489,66 +495,5 @@ const useEditor = (initNote?: NoteModel) => {
             }
         } catch (err) {
             console.error('取消编辑时出错:', err);
-            toast('操作失败', 'error');
-        }
-    }, [isEditing, contentModified, note?.content, toast]);
-
-    // 保留toggleEditMode函数以保持向后兼容，但内部使用新函数
-    const toggleEditMode = useCallback(() => {
-        if (isEditing) {
-            // 如果当前是编辑模式，则保存并退出
-            if (contentModified) {
-                saveAndExitEditMode();
-            } else {
-                // 如果内容未修改，直接退出编辑模式
-                setIsEditing(false);
-            }
-        } else {
-            // 如果当前是预览模式，则进入编辑模式
-            enterEditMode();
-        }
-    }, [isEditing, contentModified, saveAndExitEditMode, enterEditMode]);
-
-    return {
-        onCreateLink,
-        onSearchLink,
-        onClickLink,
-        onUploadImage,
-        onHoverLink,
-        getBackLinks,
-        onEditorChange,
-        onNoteChange,
-        backlinks,
-        editorEl,
-        note,
-        // 保留原有函数以保持兼容性
-        saveNote: saveAndExitEditMode,
-        toggleEditMode,
-        // 新增的独立功能函数
-        enterEditMode,
-        saveAndExitEditMode,
-        cancelEdit,
-        // 状态变量
-        isEditing,
-        setIsEditing,
-        currentContent,
-        isSaving,
-        contentModified
-    };
-};
-
-// 使用原始方式创建容器
-const EditorState = createContainer(useEditor);
-
-// 为了解决TypeScript类型错误，扩展EditorState的类型
-declare module 'unstated-next' {
-    interface ContainerType<State, Initializers extends unknown[]> {
-        Provider: React.FC<{
-            initialState?: Initializers[0];
-            children: React.ReactNode;
-        }>;
-        useContainer: () => State;
-    }
-}
-
-export default EditorState;
+            toast('操作失败', 'e
+(Content truncated due to size limit. Use line ranges to read in chunks)
