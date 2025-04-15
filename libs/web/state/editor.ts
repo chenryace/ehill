@@ -348,7 +348,7 @@ const useEditor = (initNote?: NoteModel) => {
 
     // 添加路由变化监听，处理笔记切换
     useEffect(() => {
-        const handleRouteChangeStart = (url: string) => {
+        const handleRouteChangeStart = (_: string) => {
             // 如果当前有未保存的更改，提示用户
             if (isEditing && contentModified) {
                 const confirmLeave = window.confirm('您有未保存的更改，确定要离开吗？');
@@ -372,7 +372,7 @@ const useEditor = (initNote?: NoteModel) => {
                 router.events.off('routeChangeStart', handleRouteChangeStart);
             }
         };
-    }, [router.events, isEditing, contentModified]);
+    }, [router.events, isEditing, contentModified, router]);
 
     // 添加手动保存方法
     const saveNote = useCallback(async () => {
