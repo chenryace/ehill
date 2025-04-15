@@ -2,7 +2,7 @@ import EditTitle from './edit-title';
 import Editor, { EditorProps } from './editor';
 import Backlinks from './backlinks';
 import SaveButton from './save-button';
-import { EditorState } from 'libs/web/state/editor';
+import EditorState from 'libs/web/state/editor';
 import UIState from 'libs/web/state/ui';
 import { FC } from 'react';
 import { NoteModel } from 'libs/shared/note';
