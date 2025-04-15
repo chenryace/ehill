@@ -12,6 +12,12 @@ interface EditorProviderProps {
   note?: NoteModel;
 }
 
+// 定义Editor组件的props接口
+interface EditorComponentProps {
+  isPreview?: boolean;
+  // 可以添加其他需要的props
+}
+
 // 创建一个包装组件，提供EditorState上下文
 const EditorProvider: FC<EditorProviderProps> = memo(({ note, children }) => {
   return (
@@ -23,8 +29,8 @@ const EditorProvider: FC<EditorProviderProps> = memo(({ note, children }) => {
 
 EditorProvider.displayName = 'EditorProvider';
 
-// 主编辑器组件
-const Editor: FC = memo(() => {
+// 主编辑器组件，现在接受isPreview属性
+const Editor: FC<EditorComponentProps> = memo(({ isPreview }) => {
   const {
     editorEl,
     onEditorChange,
@@ -67,6 +73,7 @@ const Editor: FC = memo(() => {
             isEditing ? 'editing' : 'preview'
           }`}
           data-mode={isEditing ? 'edit' : 'preview'}
+          data-preview={isPreview ? 'true' : 'false'}
         >
           <div className="editor">
             <DynamicMainEditor
@@ -80,6 +87,7 @@ const Editor: FC = memo(() => {
               readOnly={!isEditing}
               defaultValue={currentContent || note.content || ''}
               autoFocus={isEditing}
+              isPreview={isPreview}
             />
           </div>
         </div>
