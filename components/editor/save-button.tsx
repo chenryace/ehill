@@ -15,128 +15,118 @@ const SaveButton: FC = memo(() => {
     };
 
     return (
-        <div className="toggle-switch-container">
+        <div className="edit-save-button-container">
             <button
                 onClick={handleClick}
-                className="toggle-switch"
+                className={`edit-save-button ${isEditing ? 'save-mode' : 'edit-mode'} ${isSaving ? 'saving' : ''}`}
                 title={isEditing ? "保存" : "编辑"}
                 aria-label={isEditing ? "保存" : "编辑"}
                 disabled={isSaving}
             >
-                <div className={`toggle-switch-slider ${isEditing ? 'active' : ''} ${isSaving ? 'saving' : ''}`}>
-                    <div className="toggle-switch-button"></div>
-                    <div className="toggle-switch-labels">
-                        <span className="toggle-switch-label-off">OFF</span>
-                        <span className="toggle-switch-label-on">ON</span>
-                    </div>
-                </div>
+                {isEditing ? (
+                    <>
+                        <span className="button-icon save-icon">💾</span>
+                        <span className="button-text">保存</span>
+                    </>
+                ) : (
+                    <>
+                        <span className="button-icon edit-icon">✏️</span>
+                        <span className="button-text">编辑</span>
+                    </>
+                )}
+                {isSaving && <span className="saving-spinner"></span>}
             </button>
             <style jsx>{`
-                .toggle-switch-container {
+                .edit-save-button-container {
                     display: inline-block;
                     margin-top: 8px;
                 }
                 
-                .toggle-switch {
-                    position: relative;
-                    display: inline-block;
-                    width: 120px;
+                .edit-save-button {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    min-width: 100px;
                     height: 40px;
                     border-radius: 20px;
-                    background: transparent;
-                    padding: 0;
-                    border: none;
+                    padding: 0 16px;
+                    font-weight: bold;
+                    font-size: 16px;
                     cursor: pointer;
+                    transition: all 0.3s ease;
+                    border: none;
+                    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+                    position: relative;
                     overflow: hidden;
                 }
                 
-                .toggle-switch:disabled {
+                .edit-save-button:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+                }
+                
+                .edit-save-button:active {
+                    transform: translateY(0);
+                    box-shadow: 0 2px 3px rgba(0, 0, 0, 0.1);
+                }
+                
+                .edit-save-button:disabled {
                     cursor: not-allowed;
                     opacity: 0.7;
+                    transform: none;
+                    box-shadow: none;
                 }
                 
-                .toggle-switch-slider {
-                    position: relative;
-                    width: 100%;
-                    height: 100%;
-                    border-radius: 20px;
-                    border: 1px solid #ccc;
-                    transition: all 0.3s ease;
-                    display: flex;
-                    align-items: center;
-                }
-                
-                .toggle-switch-slider::before {
-                    content: "";
-                    position: absolute;
-                    left: 0;
-                    top: 0;
-                    width: 50%;
-                    height: 100%;
-                    background-color: #e74c3c;
-                    border-radius: 20px;
-                    z-index: 1;
-                    transition: all 0.3s ease;
-                }
-                
-                .toggle-switch-slider.active::before {
-                    left: 50%;
-                    background-color: #2ecc71;
-                }
-                
-                .toggle-switch-slider.saving::before {
+                .edit-mode {
                     background-color: #3498db;
-                }
-                
-                .toggle-switch-button {
-                    position: absolute;
-                    top: 4px;
-                    left: 4px;
-                    width: 30px;
-                    height: 30px;
-                    background-color: white;
-                    border-radius: 50%;
-                    transition: all 0.3s ease;
-                    z-index: 2;
-                }
-                
-                .toggle-switch-slider.active .toggle-switch-button {
-                    left: calc(100% - 34px);
-                }
-                
-                .toggle-switch-slider.saving .toggle-switch-button {
-                    animation: pulse 1.5s infinite;
-                }
-                
-                @keyframes pulse {
-                    0% { transform: scale(1); }
-                    50% { transform: scale(0.9); }
-                    100% { transform: scale(1); }
-                }
-                
-                .toggle-switch-labels {
-                    position: relative;
-                    width: 100%;
-                    display: flex;
-                    justify-content: space-between;
-                    z-index: 2;
-                }
-                
-                .toggle-switch-label-off,
-                .toggle-switch-label-on {
-                    width: 50%;
-                    text-align: center;
-                    font-weight: bold;
                     color: white;
-                    padding: 0 8px;
                 }
                 
-                .toggle-switch-label-off {
-                    padding-left: 12px;
+                .save-mode {
+                    background-color: #2ecc71;
+                    color: white;
                 }
                 
-                .toggle-switch-label-on {
-                    padding-right: 12px;
+                .saving {
+                    background-color: #f39c12;
+                }
+                
+                .button-icon {
+                    margin-right: 8px;
+                    font-size: 18px;
+                }
+                
+                .button-text {
+                    white-space: nowrap;
+                }
+                
+                .saving-spinner {
+                    position: absolute;
+                    top: 50%;
+                    right: 10px;
+                    transform: translateY(-50%);
+                    width: 16px;
+                    height: 16px;
+                    border: 2px solid rgba(255, 255, 255, 0.3);
+                    border-radius: 50%;
+                    border-top-color: white;
+                    animation: spin 1s linear infinite;
+                }
+                
+                @keyframes spin {
+                    to { transform: translateY(-50%) rotate(360deg); }
+                }
+                
+                @media (max-width: 640px) {
+                    .edit-save-button {
+                        min-width: 80px;
+                        padding: 0 12px;
+                        font-size: 14px;
+                    }
+                    
+                    .button-icon {
+                        font-size: 16px;
+                    }
                 }
             `}</style>
         </div>
