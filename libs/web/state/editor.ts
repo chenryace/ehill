@@ -22,11 +22,10 @@ import { ROOT_ID } from 'libs/shared/tree';
 import { has } from 'lodash';
 import UIState from './ui';
 
-// 声明全局Window接口扩展
+// 声明全局Window接口扩展，仅用于调试目的
 declare global {
     interface Window {
-        __EDIT_MODE_TOGGLE__?: boolean;
-        __LAST_EDITED_NOTE_ID__?: string; // 添加上次编辑的笔记ID
+        scrollTimer: NodeJS.Timeout;
     }
 }
 
@@ -35,7 +34,6 @@ const onSearchLink = async (keyword: string) => {
 
     return list.map((item) => ({
         title: item.title,
-        // todo 路径
         subtitle: searchRangeText({
             text: item.rawContent || '',
             keyword,
@@ -61,18 +59,53 @@ const useEditor = (initNote?: NoteModel) => {
     const toast = useToast();
     const editorEl = useRef<MarkdownEditor>(null);
     
-    // 添加编辑模式状态
+    // 基本状态管理
     const [isEditing, setIsEditing] = useState(false);
-    // 添加当前内容状态
     const [currentContent, setCurrentContent] = useState<string>('');
-    // 添加保存状态
     const [isSaving, setIsSaving] = useState(false);
-    // 添加当前笔记ID引用，用于跟踪笔记变化
-    const currentNoteIdRef = useRef<string | undefined>(note?.id);
-    // 添加内容已修改标志
     const [contentModified, setContentModified] = useState(false);
-    // 添加防止滚动触发编辑模式的标志
+    
+    // 防止滚动触发编辑模式的标志
     const preventScrollEditRef = useRef(false);
+    
+    // 笔记ID引用，用于检测笔记变化
+    const currentNoteIdRef = useRef<string | undefined>(note?.id);
+    
+    // 初始化笔记内容
+    useEffect(() => {
+        if (note?.content) {
+            setCurrentContent(note.content);
+            setContentModified(false);
+        }
+    }, [note?.content]);
+    
+    // 检测笔记ID变化，重置编辑状态
+    useEffect(() => {
+        if (note?.id !== currentNoteIdRef.current) {
+            console.log('笔记ID变化，重置编辑状态:', currentNoteIdRef.current, '->', note?.id);
+            
+            // 笔记ID变化，重置编辑状态
+            setIsEditing(false);
+            setContentModified(false);
+            
+            // 设置防滚动标志，防止滚动触发编辑模式
+            preventScrollEditRef.current = true;
+            setTimeout(() => {
+                preventScrollEditRef.current = false;
+            }, 300);
+            
+            // 更新当前笔记ID引用
+            currentNoteIdRef.current = note?.id;
+        }
+    }, [note?.id]);
+    
+    // 检查是否为新建笔记，如果是则默认进入编辑模式
+    useEffect(() => {
+        const isNew = has(router.query, 'new');
+        if (isNew) {
+            setIsEditing(true);
+        }
+    }, [router.query]);
 
     const onNoteChange = useDebouncedCallback(
         async (data: Partial<NoteModel>) => {
@@ -89,11 +122,9 @@ const useEditor = (initNote?: NoteModel) => {
                         await router.replace(noteUrl, undefined, { shallow: true });
                     }
                     
-                    // 成功创建笔记后显示提示
                     toast('笔记创建成功', 'success');
                 } else {
                     await updateNote(data);
-                    // 成功更新笔记后显示提示
                     toast('笔记保存成功', 'success');
                 }
                 
@@ -103,7 +134,7 @@ const useEditor = (initNote?: NoteModel) => {
                 console.error('保存笔记时出错:', err);
                 toast('保存失败，请重试', 'error');
                 
-                // 如果是网络错误，提供更具体的提示
+                // 提供更具体的错误提示
                 if (err instanceof Error) {
                     if (err.message.includes('network') || err.message.includes('fetch')) {
                         toast('网络连接错误，请检查您的网络连接', 'error');
@@ -175,7 +206,6 @@ const useEditor = (initNote?: NoteModel) => {
                 const data = new FormData();
                 data.append('file', file);
                 
-                // 显示上传中提示
                 toast('正在上传图片...', 'info');
                 
                 const result = await request<FormData, { url: string }>(
@@ -191,7 +221,6 @@ const useEditor = (initNote?: NoteModel) => {
                     throw Error(error || '上传图片失败');
                 }
                 
-                // 上传成功提示
                 toast('图片上传成功', 'success');
                 return result.url;
             } catch (err) {
@@ -258,7 +287,6 @@ const useEditor = (initNote?: NoteModel) => {
             setBackLinks(linkNotes);
         } catch (err) {
             console.error('获取反向链接时出错:', err);
-            // 即使出错也设置为空数组，避免UI显示问题
             setBackLinks([]);
         }
     }, [note?.id]);
@@ -271,82 +299,29 @@ const useEditor = (initNote?: NoteModel) => {
                     return;
                 }
                 
-                // 更新当前内容，但不自动保存
-                const content = value();
-                setCurrentContent(content);
-                
-                // 检查内容是否已修改
-                if (content !== note?.content) {
-                    setContentModified(true);
-                } else {
-                    setContentModified(false);
+                // 只在编辑模式下更新内容
+                if (isEditing) {
+                    // 更新当前内容，但不自动保存
+                    const content = value();
+                    setCurrentContent(content);
+                    
+                    // 检查内容是否已修改
+                    if (content !== note?.content) {
+                        setContentModified(true);
+                    } else {
+                        setContentModified(false);
+                    }
+                    
+                    console.log('内容已更新，但未自动保存');
                 }
-                
-                // 移除自动保存逻辑，只更新内容
-                console.log('内容已更新，但未自动保存');
             } catch (err) {
                 console.error('处理编辑器内容变更时出错:', err);
                 toast('处理内容变更失败', 'error');
             }
         },
-        [note?.content, toast]
+        [note?.content, toast, isEditing]
     );
 
-    // 添加初始内容加载
-    useEffect(() => {
-        if (note?.content) {
-            setCurrentContent(note.content);
-            // 重置内容修改标志
-            setContentModified(false);
-        }
-    }, [note?.content]);
-
-    // 检查笔记ID是否变化，如果变化则退出编辑模式
-    useEffect(() => {
-        if (note?.id !== currentNoteIdRef.current) {
-            console.log('笔记ID变化，退出编辑模式', currentNoteIdRef.current, '->', note?.id);
-            
-            // 笔记ID变化，退出编辑模式
-            setIsEditing(false);
-            setContentModified(false);
-            
-            // 设置防滚动标志，防止滚动触发编辑模式
-            preventScrollEditRef.current = true;
-            setTimeout(() => {
-                preventScrollEditRef.current = false;
-            }, 500);
-            
-            // 更新当前笔记ID引用
-            currentNoteIdRef.current = note?.id;
-        }
-    }, [note?.id]);
-
-    // 检查是否为新建笔记，如果是则默认进入编辑模式
-    useEffect(() => {
-        // 创建一个标志，表示组件是否已卸载
-        let isMounted = true;
-        
-        try {
-            const isNew = has(router.query, 'new');
-            
-            // 只有在组件挂载状态下才更新状态
-            if (isMounted) {
-                if (isNew) {
-                    setIsEditing(true);
-                }
-                // 移除自动退出编辑模式的逻辑，让编辑模式只针对当前笔记
-            }
-        } catch (err) {
-            console.error('处理路由变化时出错:', err);
-            // 出错时不改变编辑状态，保持当前状态
-        }
-        
-        return () => {
-            // 组件卸载时，更新标志
-            isMounted = false;
-        };
-    }, [router.query]);
-    
     // 添加未保存内容提示
     useEffect(() => {
         const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -415,7 +390,7 @@ const useEditor = (initNote?: NoteModel) => {
         };
     }, []);
 
-    // 添加手动保存方法
+    // 手动保存方法
     const saveNote = useCallback(async () => {
         if (!currentContent) return;
         
@@ -423,11 +398,6 @@ const useEditor = (initNote?: NoteModel) => {
             setIsSaving(true);
             
             await onNoteChange.callback({ content: currentContent });
-            
-            // 记录最后编辑的笔记ID
-            if (note?.id) {
-                window.__LAST_EDITED_NOTE_ID__ = note.id;
-            }
             
             // 保存成功后显示通知并退出编辑模式
             toast('笔记已保存', 'success');
@@ -439,7 +409,7 @@ const useEditor = (initNote?: NoteModel) => {
         } finally {
             setIsSaving(false);
         }
-    }, [currentContent, onNoteChange, toast, note?.id]);
+    }, [currentContent, onNoteChange, toast]);
 
     // 切换编辑模式的方法
     const toggleEditMode = useCallback(() => {
@@ -452,20 +422,19 @@ const useEditor = (initNote?: NoteModel) => {
                 return;
             }
             
-            // 切换编辑状态
-            setIsEditing((prev) => !prev);
-            
             // 如果从编辑模式切换到预览模式，且内容有变化，提示保存
             if (isEditing && contentModified) {
                 const confirmExit = window.confirm('您有未保存的更改，确定要退出编辑模式吗？');
                 if (!confirmExit) {
                     // 用户取消退出，保持编辑模式
-                    setIsEditing(true);
                     return;
                 }
                 // 用户确认退出，重置内容修改标志
                 setContentModified(false);
             }
+            
+            // 切换编辑状态
+            setIsEditing(prev => !prev);
         } catch (err) {
             console.error('切换编辑模式时出错:', err);
             toast('切换编辑模式失败', 'error');
@@ -494,14 +463,7 @@ const useEditor = (initNote?: NoteModel) => {
     };
 };
 
-// 添加全局滚动定时器类型
-declare global {
-    interface Window {
-        scrollTimer: NodeJS.Timeout;
-    }
-}
-
-// 使用原始方式创建容器，不显式指定类型参数
+// 使用原始方式创建容器
 const EditorState = createContainer(useEditor);
 
 // 为了解决TypeScript类型错误，扩展EditorState的类型
