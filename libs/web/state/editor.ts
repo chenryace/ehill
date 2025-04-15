@@ -390,56 +390,124 @@ const useEditor = (initNote?: NoteModel) => {
         };
     }, []);
 
-    // 手动保存方法
-    const saveNote = useCallback(async () => {
-        if (!currentContent) return;
-        
+    // 进入编辑模式 - 将toggleEditMode拆分为两个独立函数
+    const enterEditMode = useCallback(() => {
         try {
-            setIsSaving(true);
-            
-            await onNoteChange.callback({ content: currentContent });
-            
-            // 保存成功后显示通知并退出编辑模式
-            toast('笔记已保存', 'success');
-            setIsEditing(false);
-            setContentModified(false);
-        } catch (err) {
-            console.error('手动保存笔记时出错:', err);
-            toast('保存失败，请重试', 'error');
-        } finally {
-            setIsSaving(false);
-        }
-    }, [currentContent, onNoteChange, toast]);
-
-    // 切换编辑模式的方法
-    const toggleEditMode = useCallback(() => {
-        try {
-            console.log('切换编辑模式');
+            console.log('进入编辑模式');
             
             // 防止滚动触发的状态更新
             if (preventScrollEditRef.current) {
-                console.log('滚动中，忽略编辑模式切换');
+                console.log('滚动中，忽略编辑模式操作');
                 return;
             }
             
-            // 如果从编辑模式切换到预览模式，且内容有变化，提示保存
-            if (isEditing && contentModified) {
-                const confirmExit = window.confirm('您有未保存的更改，确定要退出编辑模式吗？');
-                if (!confirmExit) {
-                    // 用户取消退出，保持编辑模式
-                    return;
-                }
-                // 用户确认退出，重置内容修改标志
-                setContentModified(false);
+            // 只有在非编辑模式下才能进入编辑模式
+            if (!isEditing) {
+                setIsEditing(true);
+                console.log('已进入编辑模式');
+            }
+        } catch (err) {
+            console.error('进入编辑模式时出错:', err);
+            toast('无法进入编辑模式', 'error');
+        }
+    }, [isEditing, toast]);
+
+    // 保存并退出编辑模式 - 将toggleEditMode拆分为两个独立函数
+    const saveAndExitEditMode = useCallback(async () => {
+        try {
+            console.log('保存并退出编辑模式');
+            
+            // 防止滚动触发的状态更新
+            if (preventScrollEditRef.current) {
+                console.log('滚动中，忽略保存操作');
+                return;
             }
             
-            // 切换编辑状态
-            setIsEditing(prev => !prev);
+            // 只有在编辑模式下才能保存并退出
+            if (isEditing) {
+                if (!currentContent) {
+                    toast('笔记内容不能为空', 'error');
+                    return;
+                }
+                
+                setIsSaving(true);
+                
+                try {
+                    await onNoteChange.callback({ content: currentContent });
+                    
+                    // 保存成功后显示通知并退出编辑模式
+                    toast('笔记已保存', 'success');
+                    setIsEditing(false);
+                    setContentModified(false);
+                    console.log('已退出编辑模式');
+                } catch (err) {
+                    console.error('保存笔记时出错:', err);
+                    toast('保存失败，请重试', 'error');
+                    // 保存失败时不退出编辑模式
+                } finally {
+                    setIsSaving(false);
+                }
+            }
         } catch (err) {
-            console.error('切换编辑模式时出错:', err);
-            toast('切换编辑模式失败', 'error');
+            console.error('保存并退出编辑模式时出错:', err);
+            toast('操作失败', 'error');
+            setIsSaving(false);
         }
-    }, [isEditing, contentModified, toast]);
+    }, [currentContent, isEditing, onNoteChange, toast]);
+
+    // 取消编辑 - 新增函数，用于不保存直接退出编辑模式
+    const cancelEdit = useCallback(() => {
+        try {
+            console.log('取消编辑');
+            
+            // 防止滚动触发的状态更新
+            if (preventScrollEditRef.current) {
+                console.log('滚动中，忽略取消编辑操作');
+                return;
+            }
+            
+            // 只有在编辑模式下才能取消编辑
+            if (isEditing) {
+                // 如果内容已修改，提示确认
+                if (contentModified) {
+                    const confirmCancel = window.confirm('您有未保存的更改，确定要放弃这些更改吗？');
+                    if (!confirmCancel) {
+                        return;
+                    }
+                }
+                
+                // 重置为原始内容
+                if (note?.content) {
+                    setCurrentContent(note.content);
+                }
+                
+                // 退出编辑模式
+                setIsEditing(false);
+                setContentModified(false);
+                console.log('已取消编辑并退出编辑模式');
+                toast('已取消编辑', 'info');
+            }
+        } catch (err) {
+            console.error('取消编辑时出错:', err);
+            toast('操作失败', 'error');
+        }
+    }, [isEditing, contentModified, note?.content, toast]);
+
+    // 保留toggleEditMode函数以保持向后兼容，但内部使用新函数
+    const toggleEditMode = useCallback(() => {
+        if (isEditing) {
+            // 如果当前是编辑模式，则保存并退出
+            if (contentModified) {
+                saveAndExitEditMode();
+            } else {
+                // 如果内容未修改，直接退出编辑模式
+                setIsEditing(false);
+            }
+        } else {
+            // 如果当前是预览模式，则进入编辑模式
+            enterEditMode();
+        }
+    }, [isEditing, contentModified, saveAndExitEditMode, enterEditMode]);
 
     return {
         onCreateLink,
@@ -453,8 +521,14 @@ const useEditor = (initNote?: NoteModel) => {
         backlinks,
         editorEl,
         note,
-        saveNote,
+        // 保留原有函数以保持兼容性
+        saveNote: saveAndExitEditMode,
         toggleEditMode,
+        // 新增的独立功能函数
+        enterEditMode,
+        saveAndExitEditMode,
+        cancelEdit,
+        // 状态变量
         isEditing,
         setIsEditing,
         currentContent,
