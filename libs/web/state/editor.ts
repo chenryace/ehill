@@ -22,6 +22,13 @@ import { ROOT_ID } from 'libs/shared/tree';
 import { has } from 'lodash';
 import UIState from './ui';
 
+// 声明全局Window接口扩展，与route-error-handler.tsx中保持一致
+declare global {
+    interface Window {
+        __EDIT_MODE_TOGGLE__?: boolean;
+    }
+}
+
 const onSearchLink = async (keyword: string) => {
     const list = await searchNote(keyword, NOTE_DELETED.NORMAL);
 
@@ -349,6 +356,9 @@ const useEditor = (initNote?: NoteModel) => {
         try {
             setIsSaving(true);
             
+            // 设置编辑模式切换标记，防止路由错误处理器拦截
+            window.__EDIT_MODE_TOGGLE__ = true;
+            
             await onNoteChange.callback({ content: currentContent });
             
             // 保存成功后显示通知并退出编辑模式
@@ -359,13 +369,39 @@ const useEditor = (initNote?: NoteModel) => {
             toast('保存失败，请重试', 'error');
         } finally {
             setIsSaving(false);
+            
+            // 确保清除编辑模式切换标记
+            setTimeout(() => {
+                window.__EDIT_MODE_TOGGLE__ = false;
+            }, 100);
         }
     }, [currentContent, onNoteChange, toast]);
 
     // 切换编辑模式的方法
     const toggleEditMode = useCallback(() => {
-        setIsEditing((prev) => !prev);
-    }, []);
+        try {
+            // 设置编辑模式切换标记，防止路由错误处理器拦截
+            window.__EDIT_MODE_TOGGLE__ = true;
+            console.log('设置编辑模式切换标记');
+            
+            // 切换编辑状态
+            setIsEditing((prev) => !prev);
+            
+            // 如果从编辑模式切换到预览模式，且内容有变化，提示保存
+            if (isEditing && currentContent !== note?.content) {
+                toast('您有未保存的更改', 'warning');
+            }
+        } catch (err) {
+            console.error('切换编辑模式时出错:', err);
+            toast('切换编辑模式失败', 'error');
+        } finally {
+            // 确保清除编辑模式切换标记
+            setTimeout(() => {
+                window.__EDIT_MODE_TOGGLE__ = false;
+                console.log('清除编辑模式切换标记');
+            }, 100);
+        }
+    }, [isEditing, currentContent, note?.content, toast]);
 
     return {
         onCreateLink,
