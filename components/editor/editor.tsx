@@ -47,6 +47,7 @@ const useEditor = (initNote?: NoteModel) => {
     // 基本状态管理
     const [isEditing, setIsEditing] = useState(false);
     const [currentContent, setCurrentContent] = useState<string>('');
+    // @ts-ignore - 保留此状态变量以维持保存功能的完整性
     const [isSaving, setIsSaving] = useState(false);
     const [contentModified, setContentModified] = useState(false);
     
