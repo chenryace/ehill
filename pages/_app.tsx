@@ -16,7 +16,6 @@ import { muiLocale } from 'locales';
 import { ServerProps } from 'libs/server/connect';
 import { SnackbarProvider } from 'notistack';
 import { createTheme } from '@material-ui/core/styles';
-import RouteErrorHandler from '../components/route-error-handler';
 
 const handleRejection = (event: any) => {
     // react-beautiful-dnd 会捕获到 `ResizeObserver loop limit exceeded`
@@ -112,7 +111,6 @@ const AppInner = ({
                             <PortalState.Provider>
                                 <Div100vh>
                                     <DocumentHead />
-                                    <RouteErrorHandler />
                                     <SnackbarProvider>
                                         <Component {...pageProps} />
                                     </SnackbarProvider>
