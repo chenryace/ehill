@@ -15,7 +15,6 @@ import { useToast } from 'libs/web/hooks/use-toast';
 import PortalState from 'libs/web/state/portal';
 import { NoteCacheItem } from 'libs/web/cache';
 import noteCache from 'libs/web/cache/note';
-import { createContainer } from 'unstated-next';
 import MarkdownEditor from '@notea/rich-markdown-editor';
 import { useDebouncedCallback } from 'use-debounce';
 import { ROOT_ID } from 'libs/shared/tree';
@@ -496,4 +495,5 @@ const useEditor = (initNote?: NoteModel) => {
         } catch (err) {
             console.error('取消编辑时出错:', err);
             toast('操作失败', 'e
+(Content truncated due to size limit. Use line r
 (Content truncated due to size limit. Use line ranges to read in chunks)
