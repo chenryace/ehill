@@ -1,5 +1,5 @@
 import dynamic from 'next/dynamic';
-import { FC, memo } from 'react';
+import { FC, memo, useRef, useEffect } from 'react';
 import { NoteModel } from 'libs/shared/note';
 import { EDITOR_SIZE } from 'libs/shared/meta';
 import EditorState from 'libs/web/state/editor';
@@ -44,6 +44,17 @@ const MainEditor: FC<
     const {
         settings: { settings },
     } = UIState.useContainer();
+    
+    // 使用ref跟踪当前笔记ID，仅用于调试目的
+    const currentNoteIdRef = useRef<string | undefined>(note?.id);
+    
+    // 检查笔记ID是否变化，仅用于调试目的
+    useEffect(() => {
+        if (note?.id !== currentNoteIdRef.current) {
+            console.log('MainEditor: 笔记ID变化:', currentNoteIdRef.current, '->', note?.id);
+            currentNoteIdRef.current = note?.id;
+        }
+    }, [note?.id]);
     
     // 计算编辑器宽度类名
     let editorWidthClass: string;
