@@ -2,8 +2,8 @@ import { FC, memo, useEffect } from 'react';
 import EditorState from 'libs/web/state/editor';
 import { NoteModel } from 'libs/shared/note';
 import MarkdownEditor from '@notea/rich-markdown-editor';
-import ErrorBoundary from 'components/error-boundary';
-import { EditorFallback } from 'components/fallbacks';
+import ErrorBoundary from './error-boundary';
+import { EditorFallback } from './fallbacks';
 
 // 定义Editor组件的props接口
 interface EditorComponentProps {
