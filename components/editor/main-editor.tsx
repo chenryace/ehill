@@ -40,7 +40,7 @@ const MainEditor: FC<
                 <EditTitle readOnly={props.readOnly} />
                 {!props.readOnly && <SaveButton />}
                 <Editor isPreview={isPreview} {...props} />
-                {!isPreview && <Backlinks />}
+                {/* 移除 Backlinks 组件 */}
             </article>
         </EditorState.Provider>
     );
