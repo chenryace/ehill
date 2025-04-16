@@ -6,7 +6,6 @@ import dynamic from 'next/dynamic';
  import UIState from 'libs/web/state/ui';
  import EditTitle from './edit-title';
  import SaveButton from './save-button';
- import { EditorProps } from './editor';
  import ErrorBoundary from '../error-boundary';
  import MarkdownEditor from '@notea/rich-markdown-editor';
  
