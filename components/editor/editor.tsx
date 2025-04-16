@@ -29,6 +29,8 @@ import { FC, memo, useEffect } from 'react';
  
  EditorProvider.displayName = 'EditorProvider';
  
+ // 主编辑器组件
+ const Editor: FC = memo(() => {
  // 主编辑器组件，现在接受isPreview属性
  const Editor: FC<EditorComponentProps> = memo(({ isPreview }) => {
    const {
