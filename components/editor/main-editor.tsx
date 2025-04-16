@@ -1,6 +1,6 @@
 import EditTitle from './edit-title';
 import Editor, { EditorProps } from './editor';
-import Backlinks from 'components/backlinks';
+import { Backlinks } from 'components/backlinks';
 import SaveButton from './save-button';
 import EditorState from 'libs/web/state/editor';
 import UIState from 'libs/web/state/ui';
