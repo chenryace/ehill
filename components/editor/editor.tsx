@@ -102,7 +102,7 @@ const Editor: FC<EditorComponentProps> = memo((props) => {
                   onCreateLink={onCreateLink}
                   onSearchLink={onSearchLink}
                   onClickLink={onClickLink}
-                  onUploadImage={onUploadImage}
+                  uploadImage={onUploadImage}
                   onHoverLink={onHoverLink}
                   readOnly={!isEditing}
                   defaultValue={currentContent || note.content || ''}
