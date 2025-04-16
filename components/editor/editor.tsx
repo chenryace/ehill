@@ -1,5 +1,5 @@
 import { FC, memo, useEffect } from 'react';
-import EditorState from 'libs/web/state/editor';
+import { EditorState } from 'libs/web/state/editor';
 import { NoteModel } from 'libs/shared/note';
 import MarkdownEditor from '@notea/rich-markdown-editor';
 import ErrorBoundary from '../error-boundary';
