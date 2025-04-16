@@ -6,7 +6,7 @@ import ErrorBoundary from 'components/error-boundary';
 import { EditorFallback } from 'components/fallbacks';
 
 // 定义Editor组件的props接口
-interface EditorComponentProps {
+interface EditorProps {
   isPreview?: boolean;
   onChange?: (value: () => string) => void;
   onCreateLink?: (title: string) => Promise<string>;
