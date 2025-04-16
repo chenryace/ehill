@@ -6,7 +6,8 @@ const SaveButton: FC = memo(() => {
         isEditing, 
         enterEditMode, 
         saveAndExitEditMode, 
-        isSaving 
+        isSaving,
+        contentModified
     } = EditorState.useContainer();
 
     const handleClick = () => {
@@ -23,13 +24,13 @@ const SaveButton: FC = memo(() => {
         <div className="edit-save-button-container">
             <button
                 onClick={handleClick}
-                className={buttonClass}
-                title={buttonTitle}
-                aria-label={buttonText}
+                className={`edit-save-button ${isEditing ? 'save-mode' : 'edit-mode'} ${isSaving ? 'saving' : ''} ${isEditing && contentModified ? 'modified' : ''}`}
+                title={isEditing ? "保存" : "编辑"}
+                aria-label={isEditing ? "保存" : "编辑"}
                 disabled={isSaving}
             >
-                <span className="button-icon">{buttonIcon}</span>
-                <span className="button-text">{buttonText}</span>
+                <span className="button-icon">{isEditing ? "💾" : "✏️"}</span>
+                <span className="button-text">{isEditing ? "保存" : "编辑"}</span>
                 {isEditing && contentModified && (
                     <span className="modified-indicator" title="有未保存的更改">•</span>
                 )}
