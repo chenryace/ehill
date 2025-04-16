@@ -1,5 +1,5 @@
 import { FC, memo } from 'react';
-import { EditorState } from 'libs/web/state/editor';
+import EditorState from 'libs/web/state/editor';
 
 const SaveButton: FC = memo(() => {
     const { 
