@@ -25,7 +25,7 @@ import dynamic from 'next/dynamic';
  
  // 使用动态导入和React.memo优化性能
  const Editor = dynamic(() => import('./editor'), { ssr: false });
- const Backlinks = dynamic(() => import('./backlinks'), { 
+ const Backlinks = dynamic(() => import('components/backlinks'), { 
    ssr: false,
    loading: () => <div className="mt-8 text-gray-400">加载反向链接...</div>
  });
