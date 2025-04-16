@@ -36,7 +36,7 @@ const EditorProvider: FC<EditorProviderProps> = memo(({ note, children }) => {
 EditorProvider.displayName = 'EditorProvider';
 
 // 主编辑器组件，现在接受isPreview属性和其他属性
-const Editor: FC<EditorComponentProps> = memo((props) => {
+const Editor: FC<EditorProps> = memo((props) => {
   const {
     editorEl,
     onEditorChange,
