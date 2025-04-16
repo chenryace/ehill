@@ -23,21 +23,15 @@ const SaveButton: FC = memo(() => {
         <div className="edit-save-button-container">
             <button
                 onClick={handleClick}
-                className={`edit-save-button ${isEditing ? 'save-mode' : 'edit-mode'} ${isSaving ? 'saving' : ''}`}
-                title={isEditing ? "保存" : "编辑"}
-                aria-label={isEditing ? "保存" : "编辑"}
+                className={buttonClass}
+                title={buttonTitle}
+                aria-label={buttonText}
                 disabled={isSaving}
             >
-                {isEditing ? (
-                    <>
-                        <span className="button-icon save-icon">💾</span>
-                        <span className="button-text">保存</span>
-                    </>
-                ) : (
-                    <>
-                        <span className="button-icon edit-icon">✏️</span>
-                        <span className="button-text">编辑</span>
-                    </>
+                <span className="button-icon">{buttonIcon}</span>
+                <span className="button-text">{buttonText}</span>
+                {isEditing && contentModified && (
+                    <span className="modified-indicator" title="有未保存的更改">•</span>
                 )}
                 {isSaving && <span className="saving-spinner"></span>}
             </button>
@@ -94,6 +88,29 @@ const SaveButton: FC = memo(() => {
                 
                 .saving {
                     background-color: #f39c12;
+                }
+                
+                .modified {
+                    box-shadow: 0 0 0 2px rgba(241, 196, 15, 0.5);
+                }
+                
+                .modified-indicator {
+                    position: absolute;
+                    top: 8px;
+                    right: 8px;
+                    width: 8px;
+                    height: 8px;
+                    border-radius: 50%;
+                    background-color: #f1c40f;
+                    color: transparent;
+                    font-size: 0;
+                    animation: pulse 2s infinite;
+                }
+                
+                @keyframes pulse {
+                    0% { opacity: 0.6; }
+                    50% { opacity: 1; }
+                    100% { opacity: 0.6; }
                 }
                 
                 .button-icon {
